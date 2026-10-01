@@ -1,0 +1,9 @@
+{
+  "name": "Trueque U",
+  "short_name": "Trueque U",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#00796B",
+  "description": "Intercambio de objetos y materiales entre estudiantes."
+}
