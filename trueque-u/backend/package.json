@@ -1,0 +1,22 @@
+{
+  "name": "trueque-u-backend",
+  "version": "1.0.0",
+  "description": "API de acceso para Trueque U",
+  "main": "src/servidor.js",
+  "scripts": {
+    "start": "node src/servidor.js",
+    "dev": "node --watch src/servidor.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^10.0.13",
+    "pg": "^8.11.5"
+  }
+}
