@@ -30,6 +30,16 @@ class PantallaPerfil extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         FilledButton(
+          onPressed: () => context.go('/publicacion'),
+          child: const Text('Crear nueva publicación'),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton(
+          onPressed: () => context.go('/mis-publicaciones'),
+          child: const Text('Ver mis publicaciones'),
+        ),
+        const SizedBox(height: 12),
+        FilledButton(
           // Al cerrar la sesión, el router redirige solo al inicio de sesión.
           onPressed: () => context.read<ControladorAutenticacion>().cerrarSesion(),
           child: const Text('Cerrar sesión'),

@@ -17,20 +17,43 @@ String? validarContrasenaNueva(String? valor) {
 
 /// Pantalla de acceso: barra superior + contenido centrado y con scroll.
 class PaginaAcceso extends StatelessWidget {
-  const PaginaAcceso({super.key, required this.titulo, required this.hijos});
+  const PaginaAcceso({
+    super.key,
+    required this.titulo,
+    required this.hijos,
+    this.alVolver,
+    this.acciones,
+    this.anchoMaximo = 420,
+    this.botonFlotante,
+  });
 
   final String titulo;
   final List<Widget> hijos;
+  final VoidCallback? alVolver;
+  final List<Widget>? acciones;
+  final double anchoMaximo;
+  final Widget? botonFlotante;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(titulo), automaticallyImplyLeading: false),
+      appBar: AppBar(
+        title: Text(titulo),
+        automaticallyImplyLeading: false,
+        leading: alVolver != null
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: alVolver,
+              )
+            : null,
+        actions: acciones,
+      ),
+      floatingActionButton: botonFlotante,
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
+            constraints: BoxConstraints(maxWidth: anchoMaximo),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: hijos,
@@ -53,6 +76,7 @@ class CampoTexto extends StatelessWidget {
     this.accionTeclado,
     this.alEnviar,
     this.ocultar = false,
+    this.lineas = 1,
   });
 
   final TextEditingController controlador;
@@ -62,6 +86,7 @@ class CampoTexto extends StatelessWidget {
   final TextInputAction? accionTeclado;
   final VoidCallback? alEnviar;
   final bool ocultar;
+  final int lineas;
 
   @override
   Widget build(BuildContext context) {
@@ -70,6 +95,7 @@ class CampoTexto extends StatelessWidget {
       obscureText: ocultar,
       keyboardType: tipoTeclado,
       textInputAction: accionTeclado,
+      maxLines: ocultar ? 1 : lineas,
       validator: validador,
       onFieldSubmitted: (_) => alEnviar?.call(),
       decoration: InputDecoration(

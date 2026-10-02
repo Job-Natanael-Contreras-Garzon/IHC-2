@@ -40,7 +40,7 @@ class _AplicacionTruequeUState extends State<AplicacionTruequeU> {
         title: 'Trueque U',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF00796B)),
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF91230C)),
           useMaterial3: true,
         ),
         routerConfig: _rutas,

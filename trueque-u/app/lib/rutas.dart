@@ -1,15 +1,22 @@
 import 'package:go_router/go_router.dart';
 
 import 'estado/controlador_autenticacion.dart';
+import 'pantallas/Publicacion.dart';
 import 'pantallas/pantalla_cambiar_contrasena.dart';
 import 'pantallas/pantalla_inicio.dart';
 import 'pantallas/pantalla_iniciar_sesion.dart';
+import 'pantallas/pantalla_mis_publicaciones.dart';
 import 'pantallas/pantalla_perfil.dart';
 import 'pantallas/pantalla_recuperar_contrasena.dart';
 import 'pantallas/pantalla_registro.dart';
 
 /// Rutas que exigen sesión iniciada.
-const _rutasPrivadas = {'/perfil', '/cambiar-contrasena'};
+const _rutasPrivadas = {
+  '/perfil',
+  '/cambiar-contrasena',
+  '/publicacion',
+  '/mis-publicaciones',
+};
 
 /// Rutas que no tienen sentido si ya hay sesión.
 const _rutasSoloInvitados = {'/iniciar-sesion', '/registro'};
@@ -55,6 +62,14 @@ GoRouter construirRutas(ControladorAutenticacion autenticacion) {
       GoRoute(
         path: '/cambiar-contrasena',
         builder: (context, estado) => const PantallaCambiarContrasena(),
+      ),
+      GoRoute(
+        path: '/publicacion',
+        builder: (context, estado) => const PantallaPublicacion(),
+      ),
+      GoRoute(
+        path: '/mis-publicaciones',
+        builder: (context, estado) => const PantallaMisPublicaciones(),
       ),
     ],
   );

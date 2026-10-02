@@ -23,17 +23,17 @@ class ClienteApi {
   /// Token de la sesión actual (null si no hay sesión).
   String? token;
 
-  Future<Map<String, dynamic>> get(String ruta) => _enviar('GET', ruta);
+  Future<dynamic> get(String ruta) => _enviar('GET', ruta);
 
-  Future<Map<String, dynamic>> post(String ruta, [Map<String, dynamic>? cuerpo]) =>
+  Future<dynamic> post(String ruta, [Map<String, dynamic>? cuerpo]) =>
       _enviar('POST', ruta, cuerpo);
 
-  Future<Map<String, dynamic>> put(String ruta, Map<String, dynamic> cuerpo) =>
+  Future<dynamic> put(String ruta, Map<String, dynamic> cuerpo) =>
       _enviar('PUT', ruta, cuerpo);
 
-  Future<Map<String, dynamic>> delete(String ruta) => _enviar('DELETE', ruta);
+  Future<dynamic> delete(String ruta) => _enviar('DELETE', ruta);
 
-  Future<Map<String, dynamic>> _enviar(
+  Future<dynamic> _enviar(
     String metodo,
     String ruta, [
     Map<String, dynamic>? cuerpo,
@@ -57,17 +57,18 @@ class ClienteApi {
       );
     }
 
-    Map<String, dynamic> datos = {};
+    dynamic datos;
     if (respuesta.body.isNotEmpty) {
       try {
-        datos = jsonDecode(respuesta.body) as Map<String, dynamic>;
+        datos = jsonDecode(respuesta.body);
       } catch (_) {}
     }
 
-    if (respuesta.statusCode >= 200 && respuesta.statusCode < 300) return datos;
-    throw ExcepcionApi(
-      (datos['error'] as String?) ?? 'Error inesperado (${respuesta.statusCode})',
-      respuesta.statusCode,
-    );
+    if (respuesta.statusCode >= 200 && respuesta.statusCode < 300) {
+      return datos ?? <String, dynamic>{};
+    }
+    final errorMensaje = (datos is Map ? datos['error'] as String? : null) ??
+        'Error inesperado (${respuesta.statusCode})';
+    throw ExcepcionApi(errorMensaje, respuesta.statusCode);
   }
 }

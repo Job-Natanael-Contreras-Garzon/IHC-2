@@ -77,11 +77,41 @@ class ControladorAutenticacion extends ChangeNotifier {
     await _api.post('/recuperaciones', {'correo': correo.trim()});
   }
 
+  ClienteApi get api => _api;
+
   Future<void> cambiarContrasena(String contrasenaActual, String contrasenaNueva) async {
     await _api.put('/usuarios/contrasena', {
       'contrasenaActual': contrasenaActual,
       'contrasenaNueva': contrasenaNueva,
     });
+  }
+
+  /// Crea una nueva publicación de objeto para intercambiar.
+  Future<void> crearPublicacion({
+    required String titulo,
+    String? descripcion,
+    required String estado,
+  }) async {
+    await _api.post('/publicaciones', {
+      'titulo': titulo.trim(),
+      if (descripcion != null && descripcion.trim().isNotEmpty)
+        'descripcion': descripcion.trim(),
+      'estado': estado,
+    });
+  }
+
+  /// Obtiene las publicaciones creadas por la persona con sesión activa.
+  Future<List<Map<String, dynamic>>> obtenerMisPublicaciones() async {
+    final respuesta = await _api.get('/publicaciones/mias');
+    if (respuesta is List) {
+      return respuesta.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    }
+    return [];
+  }
+
+  /// Elimina una publicación propia por su ID.
+  Future<void> eliminarPublicacion(int id) async {
+    await _api.delete('/publicaciones/$id');
   }
 
   Future<void> _guardarSesion(Map<String, dynamic> datos) async {
