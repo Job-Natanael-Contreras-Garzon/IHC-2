@@ -1,6 +1,4 @@
 node_modules/
-.env
-
 # Flutter / Dart
 app/.dart_tool/
 app/.packages
