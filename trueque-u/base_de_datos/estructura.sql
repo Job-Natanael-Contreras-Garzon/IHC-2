@@ -31,3 +31,17 @@ CREATE TABLE sesiones (
 );
 
 CREATE INDEX sesiones_usuario_idx ON sesiones (usuario_id);
+
+-- Objetos o materiales que publica una persona para intercambiar.
+-- Relación uno a muchos: un usuario tiene muchas publicaciones y cada publicación es de un solo usuario.
+CREATE TABLE publicaciones (
+    id                   INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    id_usuario           INTEGER      NOT NULL REFERENCES usuarios (id) ON DELETE CASCADE,
+    titulo               VARCHAR(150) NOT NULL,
+    descripcion          TEXT,
+    estado               VARCHAR(10)  NOT NULL CHECK (estado IN ('nuevo', 'usado')),
+    estado_publicacion   VARCHAR(15)  NOT NULL DEFAULT 'disponible'
+                         CHECK (estado_publicacion IN ('oculto', 'disponible', 'reservado', 'no disponible'))
+);
+
+CREATE INDEX publicaciones_usuario_idx ON publicaciones (id_usuario);
