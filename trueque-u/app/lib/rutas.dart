@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'estado/controlador_autenticacion.dart';
 import 'pantallas/Publicacion.dart';
 import 'pantallas/pantalla_cambiar_contrasena.dart';
+import 'pantallas/pantalla_feed_publicaciones.dart';
 import 'pantallas/pantalla_inicio.dart';
 import 'pantallas/pantalla_iniciar_sesion.dart';
 import 'pantallas/pantalla_mis_publicaciones.dart';
@@ -10,12 +11,13 @@ import 'pantallas/pantalla_perfil.dart';
 import 'pantallas/pantalla_recuperar_contrasena.dart';
 import 'pantallas/pantalla_registro.dart';
 
-/// Rutas que exigen sesión iniciada.
+/// Rutas que exigen sesión iniciada (protegidas).
 const _rutasPrivadas = {
   '/perfil',
   '/cambiar-contrasena',
   '/publicacion',
   '/mis-publicaciones',
+  '/feed', // Feed general de publicaciones en cuadrícula
 };
 
 /// Rutas que no tienen sentido si ya hay sesión.
@@ -70,6 +72,11 @@ GoRouter construirRutas(ControladorAutenticacion autenticacion) {
       GoRoute(
         path: '/mis-publicaciones',
         builder: (context, estado) => const PantallaMisPublicaciones(),
+      ),
+      // Feed general: vista pública en cuadrícula de todas las ofertas de trueque
+      GoRoute(
+        path: '/feed',
+        builder: (context, estado) => const PantallaFeedPublicaciones(),
       ),
     ],
   );

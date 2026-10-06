@@ -39,7 +39,13 @@ class PantallaPerfil extends StatelessWidget {
           child: const Text('Ver mis publicaciones'),
         ),
         const SizedBox(height: 12),
+        // Botón para acceder al feed de todas las publicaciones (cards en cuadrícula)
         FilledButton(
+          onPressed: () => context.go('/feed'),
+          child: const Text('Ver publicaciones'),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton(
           // Al cerrar la sesión, el router redirige solo al inicio de sesión.
           onPressed: () => context.read<ControladorAutenticacion>().cerrarSesion(),
           child: const Text('Cerrar sesión'),

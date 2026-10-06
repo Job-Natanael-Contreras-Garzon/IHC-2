@@ -91,6 +91,56 @@ class _PantallaMisPublicacionesState extends State<PantallaMisPublicaciones> {
     }
   }
 
+  /// Permite al dueño alternar de modo/estado entre:
+  /// 'disponible', 'reservado', 'oculto', 'no disponible'.
+  Future<void> _cambiarEstado(int id, String nuevoEstado) async {
+    try {
+      final usuario = context.read<ControladorAutenticacion>().usuario;
+      await context.read<ControladorAutenticacion>().cambiarEstadoPublicacion(
+            id,
+            nuevoEstado,
+            idUsuario: usuario?.id,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Publicación cambiada a "$nuevoEstado"')),
+      );
+      _cargarPublicaciones();
+    } on ExcepcionApi catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.mensaje)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error al cambiar el estado')),
+      );
+    }
+  }
+
+  /// Función para descartar la reserva activa y regresar el objeto a 'disponible'
+  Future<void> _descartarReserva(int id) async {
+    try {
+      await context.read<ControladorAutenticacion>().descartarReservaPublicacion(id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Reserva descartada. Publicación ahora disponible.')),
+      );
+      _cargarPublicaciones();
+    } on ExcepcionApi catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.mensaje)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error al descartar la reserva')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colores = Theme.of(context).colorScheme;
@@ -159,18 +209,27 @@ class _PantallaMisPublicacionesState extends State<PantallaMisPublicaciones> {
           ),
           const SizedBox(height: 12),
           for (final pub in _publicaciones) ...[
-            _TarjetaPublicacion(
-              id: (pub['id'] as num).toInt(),
-              titulo: (pub['titulo'] as String?) ?? 'Sin título',
-              descripcion: pub['descripcion'] as String?,
-              estado: (pub['estado'] as String?) ?? 'usado',
-              estadoPublicacion:
-                  (pub['estado_publicacion'] as String?) ?? 'disponible',
-              alEliminar: () => _eliminar(
-                (pub['id'] as num).toInt(),
-                (pub['titulo'] as String?) ?? 'esta publicación',
-              ),
-            ),
+            Builder(builder: (context) {
+              final idPub = (pub['id'] as num).toInt();
+              final usuarioReserva = pub['usuario_reserva'] as Map<String, dynamic>?;
+              final nombreReserva = usuarioReserva?['nombre'] as String?;
+
+              return _TarjetaPublicacion(
+                id: idPub,
+                titulo: (pub['titulo'] as String?) ?? 'Sin título',
+                descripcion: pub['descripcion'] as String?,
+                estado: (pub['estado'] as String?) ?? 'usado',
+                estadoPublicacion:
+                    (pub['estado_publicacion'] as String?) ?? 'disponible',
+                nombreReserva: nombreReserva,
+                alEliminar: () => _eliminar(
+                  idPub,
+                  (pub['titulo'] as String?) ?? 'esta publicación',
+                ),
+                alDescartarReserva: () => _descartarReserva(idPub),
+                alCambiarEstado: (nuevoEstado) => _cambiarEstado(idPub, nuevoEstado),
+              );
+            }),
             const SizedBox(height: 12),
           ],
         ],
@@ -200,6 +259,12 @@ class _PantallaMisPublicacionesState extends State<PantallaMisPublicaciones> {
   }
 }
 
+/// =========================================================================
+/// TARJETA DE PUBLICACIÓN PROPIA
+/// =========================================================================
+/// Muestra los detalles de la publicación del usuario, el estado actual,
+/// quién la reservó (si aplica), un selector para cambiar de modo/estado,
+/// y un botón directo para descartar la reserva si está apartada.
 class _TarjetaPublicacion extends StatelessWidget {
   const _TarjetaPublicacion({
     required this.id,
@@ -207,7 +272,10 @@ class _TarjetaPublicacion extends StatelessWidget {
     this.descripcion,
     required this.estado,
     required this.estadoPublicacion,
+    this.nombreReserva,
     required this.alEliminar,
+    required this.alDescartarReserva,
+    required this.alCambiarEstado,
   });
 
   final int id;
@@ -215,23 +283,32 @@ class _TarjetaPublicacion extends StatelessWidget {
   final String? descripcion;
   final String estado;
   final String estadoPublicacion;
+  final String? nombreReserva;
   final VoidCallback alEliminar;
+  final VoidCallback alDescartarReserva;
+  final ValueChanged<String> alCambiarEstado;
 
   @override
   Widget build(BuildContext context) {
     final colores = Theme.of(context).colorScheme;
+    final estaReservada = estadoPublicacion == 'reservado';
 
     return Card(
       elevation: 1,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: colores.outlineVariant),
+        side: BorderSide(
+          color: estaReservada
+              ? colores.primary.withValues(alpha: 0.4)
+              : colores.outlineVariant,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Encabezado: Título y menú de opciones (cambiar estado / eliminar)
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -244,10 +321,58 @@ class _TarjetaPublicacion extends StatelessWidget {
                     ),
                   ),
                 ),
+                // Selector de modo / estado_publicacion
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, size: 20),
+                  tooltip: 'Cambiar modo / estado',
+                  onSelected: alCambiarEstado,
+                  itemBuilder: (ctx) => [
+                    const PopupMenuItem(
+                      value: 'disponible',
+                      child: Row(
+                        children: [
+                          Icon(Icons.check_circle_outline, size: 18, color: Colors.green),
+                          SizedBox(width: 8),
+                          Text('Marcar como Disponible'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'reservado',
+                      child: Row(
+                        children: [
+                          Icon(Icons.bookmark_outline, size: 18, color: Colors.amber),
+                          SizedBox(width: 8),
+                          Text('Marcar como Reservado'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'oculto',
+                      child: Row(
+                        children: [
+                          Icon(Icons.visibility_off_outlined, size: 18, color: Colors.grey),
+                          SizedBox(width: 8),
+                          Text('Ocultar publicación'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'no disponible',
+                      child: Row(
+                        children: [
+                          Icon(Icons.block_outlined, size: 18, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text('Marcar como No disponible'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline, size: 20),
                   color: colores.error,
-                  tooltip: 'Eliminar',
+                  tooltip: 'Eliminar definitivamente',
                   onPressed: alEliminar,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -265,6 +390,8 @@ class _TarjetaPublicacion extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 12),
+
+            // Chips con la condición del objeto y el estado de la publicación
             Wrap(
               spacing: 8,
               runSpacing: 4,
@@ -278,11 +405,43 @@ class _TarjetaPublicacion extends StatelessWidget {
                 _Etiqueta(
                   icono: Icons.info_outline,
                   texto: _formatearEstadoPublicacion(estadoPublicacion),
-                  fondo: colores.secondaryContainer,
-                  colorTexto: colores.onSecondaryContainer,
+                  fondo: estaReservada
+                      ? Colors.amber.shade100
+                      : colores.secondaryContainer,
+                  colorTexto: estaReservada
+                      ? Colors.amber.shade900
+                      : colores.onSecondaryContainer,
                 ),
+                // Indicador explícito de quién reservó la publicación
+                if (estaReservada)
+                  _Etiqueta(
+                    icono: Icons.person_pin_outlined,
+                    texto: nombreReserva != null
+                        ? 'Reservado por: $nombreReserva'
+                        : 'Reservado por un usuario',
+                    fondo: colores.tertiaryContainer,
+                    colorTexto: colores.onTertiaryContainer,
+                  ),
               ],
             ),
+
+            // Si está reservada, botón directo para descartar la reserva y volver a disponible
+            if (estaReservada) ...[
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.undo, size: 16),
+                    label: const Text('Descartar reserva (volver a disponible)'),
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    onPressed: alDescartarReserva,
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),

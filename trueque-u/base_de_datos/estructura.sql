@@ -41,7 +41,11 @@ CREATE TABLE publicaciones (
     descripcion          TEXT,
     estado               VARCHAR(10)  NOT NULL CHECK (estado IN ('nuevo', 'usado')),
     estado_publicacion   VARCHAR(15)  NOT NULL DEFAULT 'disponible'
-                         CHECK (estado_publicacion IN ('oculto', 'disponible', 'reservado', 'no disponible'))
+                         CHECK (estado_publicacion IN ('oculto', 'disponible', 'reservado', 'no disponible')),
+    -- Usuario que reservó esta publicación (NULL si no está reservada o si se descartó la reserva).
+    id_usuario_reserva   INTEGER      REFERENCES usuarios (id) ON DELETE SET NULL
 );
 
 CREATE INDEX publicaciones_usuario_idx ON publicaciones (id_usuario);
+CREATE INDEX publicaciones_usuario_reserva_idx ON publicaciones (id_usuario_reserva);
+

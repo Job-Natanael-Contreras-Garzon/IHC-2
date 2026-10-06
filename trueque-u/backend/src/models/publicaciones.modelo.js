@@ -34,6 +34,12 @@ module.exports = function (sequelize, DataTypes) {
         allowNull: false,
         defaultValue: "disponible",
       },
+      // ID del usuario que reservó la publicación (NULL si no tiene reserva activa).
+      id_usuario_reserva: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: { model: "usuarios", key: "id" },
+      },
     },
     {
       sequelize,

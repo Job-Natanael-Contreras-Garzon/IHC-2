@@ -3,13 +3,24 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../servicios/cliente_api.dart';
 
+/// Representa al usuario que tiene la sesión iniciada en la aplicación.
 class UsuarioAutenticado {
-  const UsuarioAutenticado({required this.nombre});
+  const UsuarioAutenticado({
+    required this.id,
+    required this.nombre,
+    this.correo,
+  });
 
+  final int id;
   final String nombre;
+  final String? correo;
 
   factory UsuarioAutenticado.desdeJson(Map<String, dynamic> json) =>
-      UsuarioAutenticado(nombre: json['nombre'] as String);
+      UsuarioAutenticado(
+        id: (json['id'] as num?)?.toInt() ?? 0,
+        nombre: json['nombre'] as String? ?? '',
+        correo: json['correo'] as String?,
+      );
 }
 
 /// Maneja la sesión: registro, inicio y cierre de sesión, recuperación y cambio
@@ -107,6 +118,55 @@ class ControladorAutenticacion extends ChangeNotifier {
       return respuesta.map((e) => Map<String, dynamic>.from(e as Map)).toList();
     }
     return [];
+  }
+
+  /// Obtiene todas las publicaciones visibles para el feed general (cards en grid).
+  Future<List<Map<String, dynamic>>> obtenerPublicacionesFeed() async {
+    final respuesta = await _api.get('/publicaciones');
+    if (respuesta is List) {
+      return respuesta.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    }
+    return [];
+  }
+
+  /// Reserva una publicación enviando el ID del usuario en sesión o el provisto.
+  /// Llama a PUT /api/publicaciones/:id/reservado
+  Future<void> reservarPublicacion(int id, {int? idUsuario}) async {
+    final idParaEnviar = idUsuario ?? _usuario?.id;
+    await _api.put('/publicaciones/$id/reservado', {
+      if (idParaEnviar != null) 'id_usuario': idParaEnviar,
+    });
+  }
+
+  /// Descarta o cancela una reserva activa, regresando el objeto a 'disponible'.
+  /// Llama a PUT /api/publicaciones/:id/disponible
+  Future<void> descartarReservaPublicacion(int id) async {
+    await _api.put('/publicaciones/$id/disponible', {});
+  }
+
+  /// Permite al creador alternar libremente entre los estados de publicación:
+  /// 'disponible', 'reservado', 'oculto', 'no disponible'.
+  Future<void> cambiarEstadoPublicacion(
+    int id,
+    String nuevoEstado, {
+    int? idUsuario,
+  }) async {
+    switch (nuevoEstado) {
+      case 'disponible':
+        await descartarReservaPublicacion(id);
+        break;
+      case 'reservado':
+        await reservarPublicacion(id, idUsuario: idUsuario);
+        break;
+      case 'oculto':
+        await _api.put('/publicaciones/$id/oculto', {});
+        break;
+      case 'no disponible':
+        await _api.put('/publicaciones/$id/no-disponible', {});
+        break;
+      default:
+        throw ArgumentError('Estado no válido: $nuevoEstado');
+    }
   }
 
   /// Elimina una publicación propia por su ID.
