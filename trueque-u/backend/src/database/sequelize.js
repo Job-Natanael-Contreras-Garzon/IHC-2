@@ -1,7 +1,8 @@
-const { Sequelize, DataTypes } = require("sequelize");
+const { Sequelize } = require("sequelize");
 const { baseDeDatos } = require("../configuration/entorno");
+const initModels = require("../models/init-models");
 
-// Crea la conexión de Sequelize con los mismos datos del .env que usa el resto del backend.
+// Crea la conexión con la base de datos (los datos salen del .env)
 function crearConexion() {
   const { connectionString, host, port, database, user, password } = baseDeDatos;
 
@@ -28,46 +29,19 @@ function crearConexion() {
 
 const sequelize = crearConexion();
 
-// Registro del modelo "usuario" para permitir relaciones/joins con las publicaciones.
-const Usuario = sequelize.define(
-  "usuario",
-  {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
-    nombre: {
-      type: DataTypes.STRING(100),
-      allowNull: false,
-    },
-    correo: {
-      type: DataTypes.STRING(150),
-      allowNull: false,
-    },
-  },
-  {
-    tableName: "usuarios",
-    timestamps: false,
-  },
-);
+// Carga los modelos que generó sequelize-auto (carpeta src/models)
+const models = initModels(sequelize);
 
-// Registro del modelo de publicaciones.
-const Publicacion = require("../models/publicaciones.modelo")(sequelize, DataTypes);
-
-// ASOCIACIONES:
-// 1. Una publicación pertenece a su creador/autor (id_usuario).
-Publicacion.belongsTo(Usuario, {
-  as: "autor",
+// Relaciones con nombres cortos: la app lee "autor" y "usuario_reserva"
+models.publicaciones.belongsTo(models.usuarios, {
+  as: "autor", // quien creó la publicación
   foreignKey: "id_usuario",
 });
-
-// 2. Una publicación puede estar reservada por un usuario (id_usuario_reserva).
-Publicacion.belongsTo(Usuario, {
-  as: "usuario_reserva",
+models.publicaciones.belongsTo(models.usuarios, {
+  as: "usuario_reserva", // quien la reservó (puede ser null)
   foreignKey: "id_usuario_reserva",
 });
 
-// Exporta sequelize y los modelos mapeados (models.publicacion, models.usuario).
-module.exports = { sequelize, models: sequelize.models };
-
+// Se usa así: const { models } = require("../database/sequelize");
+//             models.publicaciones.findAll(), models.usuarios.findByPk(1), etc.
+module.exports = { sequelize, models };
