@@ -1,5 +1,6 @@
 const { Op } = require("sequelize");
 const { models } = require("../database/sequelize");
+const { estaReservado } = require("../utils/reglasObjeto");
 
 // Condición del objeto: solo puede ser "nuevo" o "usado"
 const ESTADOS = ["nuevo", "usado"];
@@ -7,7 +8,11 @@ const ESTADOS = ["nuevo", "usado"];
 // Datos que se agregan a cada publicación: quién la creó y quién la reservó
 const INCLUIR_USUARIOS = [
   { model: models.usuarios, as: "autor", attributes: ["id", "nombre"] },
-  { model: models.usuarios, as: "usuario_reserva", attributes: ["id", "nombre"] },
+  {
+    model: models.usuarios,
+    as: "usuario_reserva",
+    attributes: ["id", "nombre"],
+  },
 ];
 
 // Lee el :id de la URL. Devuelve null si no es un número válido
@@ -43,7 +48,7 @@ const buscarPublicacionPropia = async (req, res) => {
 // (ni editar, ni eliminar, ni desactivar, ni descartar la reserva).
 // Devuelve true y responde el error cuando hay que frenar la acción
 const bloquearSiEstaReservada = (publicacion, res, accion) => {
-  if (publicacion.estado_publicacion !== "reservado") return false;
+  if (!estaReservado(publicacion)) return false;
 
   console.log(
     `[publicaciones] Bloqueado: no se puede ${accion} la publicación ${publicacion.id}, está reservada`,
@@ -98,7 +103,10 @@ const getPublicacion = async (req, res) => {
     });
 
     const esOculta = publicacion && publicacion.estado_publicacion === "oculto";
-    if (!publicacion || (esOculta && publicacion.id_usuario !== req.usuario.id)) {
+    if (
+      !publicacion ||
+      (esOculta && publicacion.id_usuario !== req.usuario.id)
+    ) {
       return res.status(404).json({ error: "Publicación no encontrada" });
     }
     res.json(publicacion);
@@ -165,7 +173,11 @@ const putPublicacion = async (req, res) => {
     const cambios = {}; // aquí se van juntando solo los datos que llegaron
 
     if (titulo !== undefined) {
-      if (typeof titulo !== "string" || titulo.trim().length < 2 || titulo.trim().length > 150) {
+      if (
+        typeof titulo !== "string" ||
+        titulo.trim().length < 2 ||
+        titulo.trim().length > 150
+      ) {
         return res
           .status(400)
           .json({ error: "El título debe tener entre 2 y 150 letras" });
@@ -357,7 +369,9 @@ const putPublicacionNoDisponible = async (req, res) => {
   try {
     const publicacion = await buscarPublicacionPropia(req, res);
     if (!publicacion) return;
-    if (bloquearSiEstaReservada(publicacion, res, "marcar como no disponible")) {
+    if (
+      bloquearSiEstaReservada(publicacion, res, "marcar como no disponible")
+    ) {
       return;
     }
 

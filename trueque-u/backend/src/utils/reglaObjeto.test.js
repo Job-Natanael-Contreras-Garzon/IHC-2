@@ -1,15 +1,15 @@
 const { estaReservado } = require("./reglasObjeto");
 
-describe("Restricción: objeto reservado", () => {
-  test("un objeto reservado está bloqueado", () => {
-    const objeto = { estado: "reservado" };
-    const resultado = estaReservado(objeto);
+describe("Restricción: publicación reservada", () => {
+  test("una publicación reservada está bloqueada", () => {
+    const publicacion = { estado_publicacion: "reservado" };
+    const resultado = estaReservado(publicacion);
     expect(resultado).toBe(true);
   });
 
-  test("un objeto disponible no está bloqueado", () => {
-    const objeto = { estado: "disponible" };
-    const resultado = estaReservado(objeto);
+  test("una publicación disponible no está bloqueada", () => {
+    const publicacion = { estado_publicacion: "disponible" };
+    const resultado = estaReservado(publicacion);
     expect(resultado).toBe(false);
   });
 });

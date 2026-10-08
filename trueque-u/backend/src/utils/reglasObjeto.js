@@ -1,6 +1,6 @@
-// Un objeto reservado no puede editarse ni eliminarse
-function estaReservado(objeto) {
-  return objeto.estado === "reservado";
+// Una publicación reservada no puede editarse, eliminarse, ocultarse ni marcarse como no disponible
+function estaReservado(publicacion) {
+  return publicacion.estado_publicacion === "reservado";
 }
 
 module.exports = { estaReservado };
