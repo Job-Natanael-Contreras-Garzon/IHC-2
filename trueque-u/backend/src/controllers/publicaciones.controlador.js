@@ -54,6 +54,17 @@ async function buscarPublicacionPropia(req, res) {
   return publicacion;
 }
 
+// Si la publicación ya fue reservada, el creador no puede editarla, eliminarla ni
+// desactivarla (ocultarla o marcarla como no disponible), ni descartar la reserva.
+// Devuelve true y responde con el error cuando está reservada.
+function bloquearSiEstaReservada(publicacion, res, accion) {
+  if (publicacion.estado_publicacion !== "reservado") return false;
+  res.status(409).json({
+    error: `No puedes ${accion} una publicación que ya fue reservada`,
+  });
+  return true;
+}
+
 /**
  * GET /api/publicaciones (FEED PRINCIPAL)
  * -------------------------------------------------------------
@@ -174,11 +185,13 @@ const postPublicacion = async (req, res) => {
  * PUT /api/publicaciones/:id
  * -------------------------------------------------------------
  * Edita datos informativos (título, descripción, condición físico) de una publicación propia.
+ * No se puede editar si ya está reservada.
  */
 const putPublicacion = async (req, res) => {
   try {
     const publicacion = await buscarPublicacionPropia(req, res);
     if (!publicacion) return;
+    if (bloquearSiEstaReservada(publicacion, res, "editar")) return;
 
     const { titulo, descripcion, estado } = req.body || {};
     const cambios = {};
@@ -212,11 +225,13 @@ const putPublicacion = async (req, res) => {
  * DELETE /api/publicaciones/:id
  * -------------------------------------------------------------
  * Elimina permanentemente una publicación propia.
+ * No se puede eliminar si ya está reservada.
  */
 const deletePublicacion = async (req, res) => {
   try {
     const publicacion = await buscarPublicacionPropia(req, res);
     if (!publicacion) return;
+    if (bloquearSiEstaReservada(publicacion, res, "eliminar")) return;
 
     await publicacion.destroy();
     res.json({ mensaje: "Publicación eliminada correctamente" });
@@ -295,7 +310,9 @@ const putPublicacionReservado = async (req, res) => {
  * 
  * PERMISOS Y QUIÉN PUEDE EJECUTARLA:
  *  1. El usuario que tenía la reserva activa (acción "Descartar" desde el feed).
- *  2. El dueño de la publicación (acción "Descartar reserva" o cambio de modo desde "Mis publicaciones").
+ *  2. El dueño de la publicación, solo cuando NO está reservada (por ejemplo, para
+ *     volver a activarla si estaba oculta o no disponible). Si está reservada, el dueño
+ *     ya no puede hacer nada: solo quien la reservó puede descartar la reserva.
  * 
  * REGLAS DE NEGOCIO:
  * - Cambia 'estado_publicacion' a 'disponible'.
@@ -316,6 +333,13 @@ const putPublicacionDisponible = async (req, res) => {
     // Validación de permisos: solo el dueño o la persona que la reservó pueden liberarla
     const esDueno = publicacion.id_usuario === req.usuario.id;
     const esQuienReservo = publicacion.id_usuario_reserva === req.usuario.id;
+
+    // Reservada: el dueño no puede descartar la reserva de otra persona
+    if (publicacion.estado_publicacion === "reservado" && !esQuienReservo) {
+      return res.status(403).json({
+        error: "La publicación está reservada. Solo quien la reservó puede descartar la reserva",
+      });
+    }
 
     if (!esDueno && !esQuienReservo) {
       return res.status(403).json({
@@ -344,12 +368,13 @@ const putPublicacionDisponible = async (req, res) => {
  * PUT /api/publicaciones/:id/oculto
  * -------------------------------------------------------------
  * Permite al creador ocultar su publicación del feed público.
- * Si estaba reservada, se remueve la reserva.
+ * No se puede ocultar si ya está reservada.
  */
 const putPublicacionOculto = async (req, res) => {
   try {
     const publicacion = await buscarPublicacionPropia(req, res);
     if (!publicacion) return;
+    if (bloquearSiEstaReservada(publicacion, res, "ocultar")) return;
 
     await publicacion.update({
       estado_publicacion: "oculto",
@@ -368,11 +393,13 @@ const putPublicacionOculto = async (req, res) => {
  * PUT /api/publicaciones/:id/no-disponible
  * -------------------------------------------------------------
  * Permite al creador marcar el objeto como no disponible (por ejemplo, trueque finalizado).
+ * No se puede marcar si ya está reservada.
  */
 const putPublicacionNoDisponible = async (req, res) => {
   try {
     const publicacion = await buscarPublicacionPropia(req, res);
     if (!publicacion) return;
+    if (bloquearSiEstaReservada(publicacion, res, "marcar como no disponible")) return;
 
     await publicacion.update({
       estado_publicacion: "no disponible",
