@@ -22,6 +22,7 @@ async function postSesion(req, res) {
   }
 
   const sesionId = await crearSesion(usuario.id);
+  console.log(`[sesiones] Sesión iniciada: usuario ${usuario.id}`);
   res.json({
     token: firmarToken({ usuarioId: usuario.id, sesionId }),
     usuario: usuarioPublico(usuario),
@@ -36,6 +37,7 @@ function getSesionActual(req, res) {
 // DELETE /api/sesiones/actual  ->  cierre de sesión
 async function deleteSesion(req, res) {
   await cerrarSesion(req.sesionId);
+  console.log(`[sesiones] Sesión cerrada: usuario ${req.usuario.id}`);
   res.json({ ok: true });
 }
 

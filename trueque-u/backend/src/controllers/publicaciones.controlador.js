@@ -59,6 +59,9 @@ async function buscarPublicacionPropia(req, res) {
 // Devuelve true y responde con el error cuando está reservada.
 function bloquearSiEstaReservada(publicacion, res, accion) {
   if (publicacion.estado_publicacion !== "reservado") return false;
+  console.log(
+    `[publicaciones] Bloqueado: no se puede ${accion} la publicación ${publicacion.id}, está reservada`,
+  );
   res.status(409).json({
     error: `No puedes ${accion} una publicación que ya fue reservada`,
   });
@@ -71,7 +74,7 @@ function bloquearSiEstaReservada(publicacion, res, accion) {
  * PROPÓSITO:
  * Obtener el listado general de publicaciones para la pantalla del feed (vista en cuadrícula).
  * Muestra tanto las publicaciones disponibles como las reservadas (excluyendo únicamente las "ocultas").
- * 
+ *
  * RETORNA:
  * Cada publicación incluye los datos de su creador ('autor') y, en caso de estar reservada,
  * los datos de la persona que la apartó ('usuario_reserva'). Esto permite al frontend decidir
@@ -101,7 +104,7 @@ const getPublicaciones = async (req, res) => {
  * PROPÓSITO:
  * Obtener todas las publicaciones creadas por la persona con sesión activa,
  * sin importar su estado (disponible, reservado, oculto, no disponible).
- * 
+ *
  * RETORNA:
  * Incluye 'usuario_reserva' para que el dueño sepa qué usuario le ha reservado
  * el objeto y pueda gestionar su estado (por ejemplo, descartar la reserva o cambiar de modo).
@@ -135,7 +138,10 @@ const getPublicacion = async (req, res) => {
       include: INCLUIR_USUARIOS,
     });
     const esOculta = publicacion && publicacion.estado_publicacion === "oculto";
-    if (!publicacion || (esOculta && publicacion.id_usuario !== req.usuario.id)) {
+    if (
+      !publicacion ||
+      (esOculta && publicacion.id_usuario !== req.usuario.id)
+    ) {
       return res.status(404).json({ error: "Publicación no encontrada" });
     }
     res.json(publicacion);
@@ -155,13 +161,19 @@ const postPublicacion = async (req, res) => {
   try {
     const { titulo, descripcion, estado } = req.body || {};
     if (typeof titulo !== "string" || titulo.trim().length < 2) {
-      return res.status(400).json({ error: "Escribe un título (mínimo 2 letras)" });
+      return res
+        .status(400)
+        .json({ error: "Escribe un título (mínimo 2 letras)" });
     }
     if (titulo.trim().length > 150) {
-      return res.status(400).json({ error: "El título es muy largo (máximo 150)" });
+      return res
+        .status(400)
+        .json({ error: "El título es muy largo (máximo 150)" });
     }
     if (!ESTADOS.includes(estado)) {
-      return res.status(400).json({ error: "El estado debe ser nuevo o usado" });
+      return res
+        .status(400)
+        .json({ error: "El estado debe ser nuevo o usado" });
     }
 
     const nueva = await models.publicacion.create({
@@ -174,6 +186,9 @@ const postPublicacion = async (req, res) => {
     const publicacion = await models.publicacion.findByPk(nueva.id, {
       include: INCLUIR_USUARIOS,
     });
+    console.log(
+      `[publicaciones] Creada: id ${nueva.id} (usuario ${req.usuario.id})`,
+    );
     res.status(201).json(publicacion);
   } catch (error) {
     console.error("Error al crear publicación:", error);
@@ -197,23 +212,35 @@ const putPublicacion = async (req, res) => {
     const cambios = {};
 
     if (titulo !== undefined) {
-      if (typeof titulo !== "string" || titulo.trim().length < 2 || titulo.trim().length > 150) {
-        return res.status(400).json({ error: "El título debe tener entre 2 y 150 letras" });
+      if (
+        typeof titulo !== "string" ||
+        titulo.trim().length < 2 ||
+        titulo.trim().length > 150
+      ) {
+        return res
+          .status(400)
+          .json({ error: "El título debe tener entre 2 y 150 letras" });
       }
       cambios.titulo = titulo.trim();
     }
     if (descripcion !== undefined) {
-      cambios.descripcion = typeof descripcion === "string" ? descripcion.trim() : null;
+      cambios.descripcion =
+        typeof descripcion === "string" ? descripcion.trim() : null;
     }
     if (estado !== undefined) {
       if (!ESTADOS.includes(estado)) {
-        return res.status(400).json({ error: "El estado debe ser nuevo o usado" });
+        return res
+          .status(400)
+          .json({ error: "El estado debe ser nuevo o usado" });
       }
       cambios.estado = estado;
     }
 
     await publicacion.update(cambios);
     await publicacion.reload({ include: INCLUIR_USUARIOS });
+    console.log(
+      `[publicaciones] Actualizada: id ${publicacion.id} (usuario ${req.usuario.id})`,
+    );
     res.json({ publicacion, mensaje: "Publicación actualizada correctamente" });
   } catch (error) {
     console.error("Error al actualizar publicación:", error);
@@ -234,6 +261,9 @@ const deletePublicacion = async (req, res) => {
     if (bloquearSiEstaReservada(publicacion, res, "eliminar")) return;
 
     await publicacion.destroy();
+    console.log(
+      `[publicaciones] Eliminada: id ${publicacion.id} (usuario ${req.usuario.id})`,
+    );
     res.json({ mensaje: "Publicación eliminada correctamente" });
   } catch (error) {
     console.error("Error al eliminar publicación:", error);
@@ -248,11 +278,11 @@ const deletePublicacion = async (req, res) => {
  * Permite reservar una publicación. Esta acción puede ser realizada por:
  *  1. Un usuario interesado desde el feed público.
  *  2. El propio dueño desde "Mis publicaciones" (por ejemplo, si acordó el trueque fuera de la app).
- * 
+ *
  * ENTRADA Y PARÁMETROS:
  * - Recibe opcionalmente en el body `{ "id_usuario": <id> }` para especificar explícitamente
  *   el usuario que reserva. Si no se envía en el body, se utiliza el ID de la sesión actual (`req.usuario.id`).
- * 
+ *
  * REGLAS DE NEGOCIO:
  * - La publicación debe existir.
  * - Solo se puede reservar si está actualmente en estado 'disponible' (evita doble reserva concurrente).
@@ -273,15 +303,21 @@ const putPublicacionReservado = async (req, res) => {
 
     // Si ya está reservada por alguien más
     if (publicacion.estado_publicacion === "reservado") {
-      return res.status(409).json({ error: "La publicación ya se encuentra reservada" });
+      return res
+        .status(409)
+        .json({ error: "La publicación ya se encuentra reservada" });
     }
 
     // Determina el ID del usuario que toma la reserva
     const idUsuarioReserva =
-      req.body && req.body.id_usuario ? Number(req.body.id_usuario) : req.usuario.id;
+      req.body && req.body.id_usuario
+        ? Number(req.body.id_usuario)
+        : req.usuario.id;
 
     if (!Number.isInteger(idUsuarioReserva) || idUsuarioReserva <= 0) {
-      return res.status(400).json({ error: "El id del usuario que reserva no es válido" });
+      return res
+        .status(400)
+        .json({ error: "El id del usuario que reserva no es válido" });
     }
 
     // Efectúa la reserva guardando el estado y la referencia del usuario
@@ -292,6 +328,9 @@ const putPublicacionReservado = async (req, res) => {
 
     // Recarga con la relación para devolver los nombres actualizados
     await publicacion.reload({ include: INCLUIR_USUARIOS });
+    console.log(
+      `[publicaciones] Reservada: id ${publicacion.id} por el usuario ${idUsuarioReserva}`,
+    );
     res.json({
       publicacion,
       mensaje: "Publicación reservada correctamente",
@@ -307,13 +346,12 @@ const putPublicacionReservado = async (req, res) => {
  * -------------------------------------------------------------
  * PROPÓSITO Y FUNCIONAMIENTO:
  * Regresa la publicación al estado 'disponible' y limpia la reserva (id_usuario_reserva = NULL).
- * 
  * PERMISOS Y QUIÉN PUEDE EJECUTARLA:
  *  1. El usuario que tenía la reserva activa (acción "Descartar" desde el feed).
  *  2. El dueño de la publicación, solo cuando NO está reservada (por ejemplo, para
  *     volver a activarla si estaba oculta o no disponible). Si está reservada, el dueño
  *     ya no puede hacer nada: solo quien la reservó puede descartar la reserva.
- * 
+ *
  * REGLAS DE NEGOCIO:
  * - Cambia 'estado_publicacion' a 'disponible'.
  * - Limpia 'id_usuario_reserva' a null para que el objeto quede libre de nuevo.
@@ -337,13 +375,15 @@ const putPublicacionDisponible = async (req, res) => {
     // Reservada: el dueño no puede descartar la reserva de otra persona
     if (publicacion.estado_publicacion === "reservado" && !esQuienReservo) {
       return res.status(403).json({
-        error: "La publicación está reservada. Solo quien la reservó puede descartar la reserva",
+        error:
+          "La publicación está reservada. Solo quien la reservó puede descartar la reserva",
       });
     }
 
     if (!esDueno && !esQuienReservo) {
       return res.status(403).json({
-        error: "No tienes permiso para liberar o descartar la reserva de esta publicación",
+        error:
+          "No tienes permiso para liberar o descartar la reserva de esta publicación",
       });
     }
 
@@ -354,6 +394,9 @@ const putPublicacionDisponible = async (req, res) => {
     });
 
     await publicacion.reload({ include: INCLUIR_USUARIOS });
+    console.log(
+      `[publicaciones] Disponible: id ${publicacion.id} (usuario ${req.usuario.id})`,
+    );
     res.json({
       publicacion,
       mensaje: "Publicación ahora disponible para intercambio",
@@ -382,10 +425,15 @@ const putPublicacionOculto = async (req, res) => {
     });
 
     await publicacion.reload({ include: INCLUIR_USUARIOS });
+    console.log(
+      `[publicaciones] Oculta: id ${publicacion.id} (usuario ${req.usuario.id})`,
+    );
     res.json({ publicacion, mensaje: 'Publicación ahora está "oculto"' });
   } catch (error) {
     console.error("Error al ocultar publicación:", error);
-    res.status(500).json({ error: "Error al cambiar el estado de la publicación" });
+    res
+      .status(500)
+      .json({ error: "Error al cambiar el estado de la publicación" });
   }
 };
 
@@ -399,7 +447,8 @@ const putPublicacionNoDisponible = async (req, res) => {
   try {
     const publicacion = await buscarPublicacionPropia(req, res);
     if (!publicacion) return;
-    if (bloquearSiEstaReservada(publicacion, res, "marcar como no disponible")) return;
+    if (bloquearSiEstaReservada(publicacion, res, "marcar como no disponible"))
+      return;
 
     await publicacion.update({
       estado_publicacion: "no disponible",
@@ -407,10 +456,18 @@ const putPublicacionNoDisponible = async (req, res) => {
     });
 
     await publicacion.reload({ include: INCLUIR_USUARIOS });
-    res.json({ publicacion, mensaje: 'Publicación ahora está "no disponible"' });
+    console.log(
+      `[publicaciones] No disponible: id ${publicacion.id} (usuario ${req.usuario.id})`,
+    );
+    res.json({
+      publicacion,
+      mensaje: 'Publicación ahora está "no disponible"',
+    });
   } catch (error) {
     console.error("Error al marcar publicación como no disponible:", error);
-    res.status(500).json({ error: "Error al cambiar el estado de la publicación" });
+    res
+      .status(500)
+      .json({ error: "Error al cambiar el estado de la publicación" });
   }
 };
 
@@ -427,4 +484,3 @@ module.exports = {
   putPublicacionReservado,
   putPublicacionNoDisponible,
 };
-

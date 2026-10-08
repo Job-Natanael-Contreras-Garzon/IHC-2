@@ -42,6 +42,7 @@ async function postUsuario(req, res) {
       const sesionId = await crearSesion(usuario.id, ejecutar);
       return { usuario, sesionId };
     });
+    console.log(`[usuarios] Creado: id ${usuario.id}`);
     res.status(201).json({
       token: firmarToken({ usuarioId: usuario.id, sesionId }),
       usuario: usuarioPublico(usuario),
@@ -77,6 +78,7 @@ async function putContrasena(req, res) {
     req.usuario.id,
     await cifrar(contrasenaNueva),
   );
+  console.log(`[usuarios] Contraseña actualizada: usuario ${req.usuario.id}`);
   res.json({ ok: true, mensaje: "Contraseña actualizada" });
 }
 

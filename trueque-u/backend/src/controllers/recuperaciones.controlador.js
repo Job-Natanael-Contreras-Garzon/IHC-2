@@ -43,6 +43,9 @@ async function postRecuperacion(req, res) {
       .json({ error: "No se pudo enviar el correo. Intenta de nuevo." });
   }
 
+  console.log(
+    `[recuperaciones] Contraseña nueva enviada por correo: usuario ${usuario.id}`,
+  );
   res.json({
     ok: true,
     mensaje: "Te enviamos una contraseña nueva a tu correo",
