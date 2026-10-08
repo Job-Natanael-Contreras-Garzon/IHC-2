@@ -38,7 +38,7 @@ class ClienteApi {
     String ruta, [
     Map<String, dynamic>? cuerpo,
   ]) async {
-    final uri = Uri.parse('$urlBaseApi$ruta');
+    final uri = Uri.parse('${ConfiguracionEntorno.urlBase}$ruta');
     final cabeceras = <String, String>{'Content-Type': 'application/json'};
     if (token != null) cabeceras['Authorization'] = 'Bearer $token';
 
@@ -50,7 +50,7 @@ class ClienteApi {
         'PUT' => _cliente.put(uri, headers: cabeceras, body: jsonEncode(cuerpo ?? {})),
         _ => _cliente.post(uri, headers: cabeceras, body: jsonEncode(cuerpo ?? {})),
       };
-      respuesta = await peticion.timeout(const Duration(seconds: 10));
+      respuesta = await peticion.timeout(const Duration(seconds: 60));
     } catch (_) {
       throw ExcepcionApi(
         'No se pudo conectar con el servidor. ¿Está encendido el backend?',
@@ -67,8 +67,28 @@ class ClienteApi {
     if (respuesta.statusCode >= 200 && respuesta.statusCode < 300) {
       return datos ?? <String, dynamic>{};
     }
+    // Si el backend mandó su propio mensaje se usa ese; si no, se explica el código.
     final errorMensaje = (datos is Map ? datos['error'] as String? : null) ??
-        'Error inesperado (${respuesta.statusCode})';
+        _explicarCodigo(respuesta.statusCode);
     throw ExcepcionApi(errorMensaje, respuesta.statusCode);
+  }
+
+  /// Explica en palabras simples qué significa cada código de error HTTP.
+  String _explicarCodigo(int codigo) {
+    final explicacion = switch (codigo) {
+      400 => 'La solicitud no es válida. Revisa los datos enviados.',
+      401 => 'Tu sesión no es válida o venció. Inicia sesión de nuevo.',
+      403 => 'No tienes permiso para hacer esta acción.',
+      404 => 'No se encontró lo que buscas.',
+      405 => 'Esta acción no está permitida en el servidor.',
+      408 => 'La solicitud tardó demasiado en enviarse. Intenta de nuevo.',
+      409 => 'La acción choca con el estado actual. Actualiza e intenta de nuevo.',
+      500 => 'El servidor tuvo un problema interno. Intenta más tarde.',
+      502 => 'El servidor no respondió bien. Intenta de nuevo en unos segundos.',
+      503 => 'El servidor no está disponible ahora. Intenta más tarde.',
+      504 => 'El servidor tardó demasiado en responder. Intenta de nuevo en unos segundos.',
+      _ => 'Ocurrió un error inesperado.',
+    };
+    return 'Error $codigo: $explicacion';
   }
 }

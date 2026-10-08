@@ -1,14 +1,17 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-/// Dirección del backend. Se puede cambiar al ejecutar:
-///   flutter run -d chrome --dart-define=URL_API=http://192.168.1.10:3000/api
-const String _urlApiManual = String.fromEnvironment('URL_API');
+/// Datos de configuración que salen del archivo .env
+class ConfiguracionEntorno {
+  ConfiguracionEntorno._();
 
-String get urlBaseApi {
-  if (_urlApiManual.isNotEmpty) return _urlApiManual;
-  // El emulador de Android ve el computador como 10.0.2.2
-  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-    return 'http://10.0.2.2:3000/api';
+  /// Dirección del servidor (sin /api). Si el .env no la trae, usa la local.
+  static String get _servidor {
+    final url = dotenv.env['API_URL'];
+    if (url == null || url.isEmpty) return 'http://localhost:3000';
+    // Se quitan las barras del final para no generar "//api"
+    return url.replaceAll(RegExp(r'/+$'), '');
   }
-  return 'http://localhost:3000/api';
+
+  /// Dirección base de las peticiones, por ejemplo https://ihc-2.onrender.com/api
+  static String get urlBase => '$_servidor/api';
 }
