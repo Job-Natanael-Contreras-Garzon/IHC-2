@@ -141,6 +141,42 @@ class _PantallaMisPublicacionesState extends State<PantallaMisPublicaciones> {
     }
   }
 
+  /// Función para editar nombre y descripción de la publicación.
+  /// Si está reservada, no permite editar y muestra el mensaje explicativo.
+  Future<void> _editar(
+    int id,
+    String tituloActual,
+    String? descripcionActual,
+    bool estaReservada,
+  ) async {
+    // Si la publicación está reservada por alguien, bloqueamos la acción y mostramos el error
+    if (estaReservada) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No puedes editar una publicación que ya fue reservada'),
+        ),
+      );
+      return;
+    }
+
+    // Abre el formulario modal para editar nombre y descripción
+    final resultado = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => _DialogoEditarPublicacion(
+        id: id,
+        tituloInicial: tituloActual,
+        descripcionInicial: descripcionActual,
+      ),
+    );
+
+    if (resultado == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Publicación actualizada correctamente')),
+      );
+      _cargarPublicaciones();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colores = Theme.of(context).colorScheme;
@@ -213,6 +249,7 @@ class _PantallaMisPublicacionesState extends State<PantallaMisPublicaciones> {
               final idPub = (pub['id'] as num).toInt();
               final usuarioReserva = pub['usuario_reserva'] as Map<String, dynamic>?;
               final nombreReserva = usuarioReserva?['nombre'] as String?;
+              final estaReservada = pub['estado_publicacion'] == 'reservado';
 
               return _TarjetaPublicacion(
                 id: idPub,
@@ -222,6 +259,12 @@ class _PantallaMisPublicacionesState extends State<PantallaMisPublicaciones> {
                 estadoPublicacion:
                     (pub['estado_publicacion'] as String?) ?? 'disponible',
                 nombreReserva: nombreReserva,
+                alEditar: () => _editar(
+                  idPub,
+                  (pub['titulo'] as String?) ?? '',
+                  pub['descripcion'] as String?,
+                  estaReservada,
+                ),
                 alEliminar: () => _eliminar(
                   idPub,
                   (pub['titulo'] as String?) ?? 'esta publicación',
@@ -273,6 +316,7 @@ class _TarjetaPublicacion extends StatelessWidget {
     required this.estado,
     required this.estadoPublicacion,
     this.nombreReserva,
+    required this.alEditar,
     required this.alEliminar,
     required this.alDescartarReserva,
     required this.alCambiarEstado,
@@ -284,6 +328,7 @@ class _TarjetaPublicacion extends StatelessWidget {
   final String estado;
   final String estadoPublicacion;
   final String? nombreReserva;
+  final VoidCallback alEditar;
   final VoidCallback alEliminar;
   final VoidCallback alDescartarReserva;
   final ValueChanged<String> alCambiarEstado;
@@ -308,7 +353,7 @@ class _TarjetaPublicacion extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Encabezado: Título y menú de opciones (cambiar estado / eliminar)
+            // Encabezado: Título y menú de opciones (editar / cambiar estado / eliminar)
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -321,6 +366,23 @@ class _TarjetaPublicacion extends StatelessWidget {
                     ),
                   ),
                 ),
+                // Botón lápiz para editar nombre y descripción (deshabilitado visualmente si está reservada)
+                IconButton(
+                  icon: Icon(
+                    Icons.edit_outlined,
+                    size: 20,
+                    color: estaReservada
+                        ? colores.outline.withValues(alpha: 0.35)
+                        : colores.primary,
+                  ),
+                  tooltip: estaReservada
+                      ? 'No se puede editar: la publicación está reservada'
+                      : 'Editar información',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: alEditar,
+                ),
+                const SizedBox(width: 8),
                 // Selector de modo / estado_publicacion
                 PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert, size: 20),
@@ -503,3 +565,139 @@ class _Etiqueta extends StatelessWidget {
     );
   }
 }
+
+/// =========================================================================
+/// DIÁLOGO PARA EDITAR INFORMACIÓN (SOLO NOMBRE Y DESCRIPCIÓN)
+/// =========================================================================
+/// Permite modificar únicamente el nombre y la descripción del objeto publicado.
+/// Muestra errores de validación y respuestas de error del servidor como BannerError.
+class _DialogoEditarPublicacion extends StatefulWidget {
+  const _DialogoEditarPublicacion({
+    required this.id,
+    required this.tituloInicial,
+    this.descripcionInicial,
+  });
+
+  final int id;
+  final String tituloInicial;
+  final String? descripcionInicial;
+
+  @override
+  State<_DialogoEditarPublicacion> createState() =>
+      _DialogoEditarPublicacionState();
+}
+
+class _DialogoEditarPublicacionState extends State<_DialogoEditarPublicacion> {
+  final _formulario = GlobalKey<FormState>();
+  late final TextEditingController _tituloCtrl;
+  late final TextEditingController _descripcionCtrl;
+  bool _guardando = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _tituloCtrl = TextEditingController(text: widget.tituloInicial);
+    _descripcionCtrl =
+        TextEditingController(text: widget.descripcionInicial ?? '');
+  }
+
+  @override
+  void dispose() {
+    _tituloCtrl.dispose();
+    _descripcionCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _guardar() async {
+    if (!_formulario.currentState!.validate()) return;
+
+    setState(() {
+      _guardando = true;
+      _error = null;
+    });
+
+    try {
+      await context.read<ControladorAutenticacion>().editarPublicacion(
+            widget.id,
+            titulo: _tituloCtrl.text,
+            descripcion: _descripcionCtrl.text,
+          );
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } on ExcepcionApi catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.mensaje;
+        _guardando = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Ocurrió un error al actualizar la publicación';
+        _guardando = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Editar información'),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Form(
+          key: _formulario,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                CampoTexto(
+                  controlador: _tituloCtrl,
+                  etiqueta: 'Nombre del objeto',
+                  accionTeclado: TextInputAction.next,
+                  validador: (v) {
+                    final texto = (v ?? '').trim();
+                    if (texto.isEmpty) return 'Escribe el nombre del objeto';
+                    if (texto.length < 2) return 'Mínimo 2 letras';
+                    if (texto.length > 150) return 'Máximo 150 caracteres';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                CampoTexto(
+                  controlador: _descripcionCtrl,
+                  etiqueta: 'Descripción (opcional)',
+                  lineas: 3,
+                  tipoTeclado: TextInputType.multiline,
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 16),
+                  BannerError(_error),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _guardando ? null : () => Navigator.of(context).pop(false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: _guardando ? null : _guardar,
+          child: _guardando
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Guardar'),
+        ),
+      ],
+    );
+  }
+}
+

@@ -174,6 +174,21 @@ class ControladorAutenticacion extends ChangeNotifier {
     await _api.delete('/publicaciones/$id');
   }
 
+  /// Edita la información básica (título y descripción) de una publicación propia.
+  /// Llama a PUT /api/publicaciones/:id
+  Future<void> editarPublicacion(
+    int id, {
+    required String titulo,
+    String? descripcion,
+  }) async {
+    await _api.put('/publicaciones/$id', {
+      'titulo': titulo.trim(),
+      'descripcion': (descripcion != null && descripcion.trim().isNotEmpty)
+          ? descripcion.trim()
+          : null,
+    });
+  }
+
   Future<void> _guardarSesion(Map<String, dynamic> datos) async {
     final token = datos['token'] as String;
     _api.token = token;
