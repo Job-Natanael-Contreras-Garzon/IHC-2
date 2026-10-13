@@ -5,6 +5,7 @@ import 'pantallas/Publicacion.dart';
 import 'pantallas/pantalla_cambiar_contrasena.dart';
 import 'pantallas/pantalla_feed_publicaciones.dart';
 import 'pantallas/pantalla_inicio.dart';
+import 'pantallas/pantalla_intercambios.dart';
 import 'pantallas/pantalla_iniciar_sesion.dart';
 import 'pantallas/pantalla_mis_publicaciones.dart';
 import 'pantallas/pantalla_perfil.dart';
@@ -18,6 +19,7 @@ const _rutasPrivadas = {
   '/publicacion',
   '/mis-publicaciones',
   '/feed', // Feed general de publicaciones en cuadrícula
+  '/intercambios', // Intercambios completados de la persona
 };
 
 /// Rutas que no tienen sentido si ya hay sesión.
@@ -72,6 +74,11 @@ GoRouter construirRutas(ControladorAutenticacion autenticacion) {
       GoRoute(
         path: '/mis-publicaciones',
         builder: (context, estado) => const PantallaMisPublicaciones(),
+      ),
+      // Intercambios completados de la persona con sesión
+      GoRoute(
+        path: '/intercambios',
+        builder: (context, estado) => const PantallaIntercambios(),
       ),
       // Feed general: vista pública en cuadrícula de todas las ofertas de trueque
       GoRoute(

@@ -19,6 +19,7 @@ class _PantallaPublicacionState extends State<PantallaPublicacion> {
   final _nombre = TextEditingController();
   final _descripcion = TextEditingController();
   String _estado = 'nuevo'; // 'nuevo' o 'usado'
+  String _categoria = 'otros'; // libros, electronica, ropa u otros
   bool _cargando = false;
   String? _error;
 
@@ -41,6 +42,7 @@ class _PantallaPublicacionState extends State<PantallaPublicacion> {
             titulo: _nombre.text,
             descripcion: _descripcion.text,
             estado: _estado,
+            categoria: _categoria,
           );
 
       if (!mounted) return;
@@ -108,6 +110,23 @@ class _PantallaPublicacionState extends State<PantallaPublicacion> {
                 onChanged: (valor) {
                   if (valor != null) {
                     setState(() => _estado = valor);
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                initialValue: _categoria,
+                decoration: const InputDecoration(
+                  labelText: 'Categoría',
+                  border: OutlineInputBorder(),
+                ),
+                items: [
+                  for (final c in etiquetasCategoria.entries)
+                    DropdownMenuItem(value: c.key, child: Text(c.value)),
+                ],
+                onChanged: (valor) {
+                  if (valor != null) {
+                    setState(() => _categoria = valor);
                   }
                 },
               ),

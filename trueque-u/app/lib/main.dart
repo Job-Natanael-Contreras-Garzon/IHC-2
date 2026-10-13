@@ -4,13 +4,21 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'configuracion.dart';
 import 'estado/controlador_autenticacion.dart';
 import 'rutas.dart';
 import 'servicios/cliente_api.dart';
 
 Future<void> main() async {
+  debugPrint('[inicio] Arrancando Trueque U...');
   WidgetsFlutterBinding.ensureInitialized();
+
+  debugPrint('[inicio] Leyendo el archivo .env');
   await dotenv.load(fileName: '.env');
+  debugPrint('[inicio] El backend está en: ${ConfiguracionEntorno.urlBase}');
+  if (ConfiguracionEntorno.usaServidorLocal) {
+    debugPrint('[inicio] OJO: el .env no trae API_URL, se usará localhost (en el celular no sirve)');
+  }
 
   final preferencias = await SharedPreferences.getInstance();
   final autenticacion = ControladorAutenticacion(ClienteApi(), preferencias);
@@ -19,6 +27,7 @@ Future<void> main() async {
   // recargar la app las rutas privadas ya sepan si hay persona o no.
   await autenticacion.restaurarSesion();
 
+  debugPrint('[inicio] Todo listo, se muestra la primera pantalla');
   runApp(AplicacionTruequeU(autenticacion: autenticacion));
 }
 

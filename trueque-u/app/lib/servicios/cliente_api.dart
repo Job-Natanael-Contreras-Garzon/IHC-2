@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../configuracion.dart';
@@ -42,6 +44,10 @@ class ClienteApi {
     final cabeceras = <String, String>{'Content-Type': 'application/json'};
     if (token != null) cabeceras['Authorization'] = 'Bearer $token';
 
+    // Solo se imprime el método y la dirección (nunca el token ni las contraseñas)
+    debugPrint('[api] Mandando $metodo $uri');
+    final reloj = Stopwatch()..start();
+
     http.Response respuesta;
     try {
       final peticion = switch (metodo) {
@@ -51,17 +57,26 @@ class ClienteApi {
         _ => _cliente.post(uri, headers: cabeceras, body: jsonEncode(cuerpo ?? {})),
       };
       respuesta = await peticion.timeout(const Duration(seconds: 60));
-    } catch (_) {
+    } catch (e) {
+      final seg = (reloj.elapsedMilliseconds / 1000).toStringAsFixed(1);
+      if (e is TimeoutException) {
+        debugPrint('[api] No contestó en $seg s. Si Render estaba dormido, tarda en despertar.');
+      } else {
+        debugPrint('[api] No se pudo conectar ($seg s). Error real: ${e.runtimeType} -> $e');
+      }
       throw ExcepcionApi(
         'No se pudo conectar con el servidor. ¿Está encendido el backend?',
       );
     }
+    debugPrint('[api] Respondió ${respuesta.statusCode} en ${reloj.elapsedMilliseconds} ms');
 
     dynamic datos;
     if (respuesta.body.isNotEmpty) {
       try {
         datos = jsonDecode(respuesta.body);
-      } catch (_) {}
+      } catch (_) {
+        debugPrint('[api] La respuesta no venía en JSON (¿será otra página?)');
+      }
     }
 
     if (respuesta.statusCode >= 200 && respuesta.statusCode < 300) {
@@ -70,6 +85,7 @@ class ClienteApi {
     // Si el backend mandó su propio mensaje se usa ese; si no, se explica el código.
     final errorMensaje = (datos is Map ? datos['error'] as String? : null) ??
         _explicarCodigo(respuesta.statusCode);
+    debugPrint('[api] Error ${respuesta.statusCode}: $errorMensaje');
     throw ExcepcionApi(errorMensaje, respuesta.statusCode);
   }
 

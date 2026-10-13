@@ -10,6 +10,62 @@ String? validarCorreo(String? valor) {
   return null;
 }
 
+// El teléfono es opcional; si se escribe, deben ser 8 dígitos
+String? validarTelefonoOpcional(String? valor) {
+  final texto = (valor ?? '').trim();
+  if (texto.isEmpty) return null;
+  if (!RegExp(r'^\d{8}$').hasMatch(texto)) return 'El teléfono debe tener 8 dígitos';
+  return null;
+}
+
+// Categorías de las publicaciones: lo que se guarda -> lo que se muestra
+const etiquetasCategoria = {
+  'libros': 'Libros',
+  'electronica': 'Electrónica',
+  'ropa': 'Ropa',
+  'otros': 'Otros',
+};
+
+// Condición del objeto
+const etiquetasCondicion = {
+  'nuevo': 'Nuevo',
+  'usado': 'Usado',
+};
+
+// Disponibilidad que se puede filtrar en el catálogo
+const etiquetasDisponibilidad = {
+  'disponible': 'Disponible',
+  'reservado': 'Reservado',
+  'intercambiado': 'Intercambiado',
+};
+
+/// Pregunta "¿seguro?" antes de una acción. Devuelve true si la persona acepta.
+Future<bool> confirmarAccion(
+  BuildContext context, {
+  required String titulo,
+  required String mensaje,
+  required String textoBoton,
+}) async {
+  final respuesta = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: Text(titulo),
+      content: Text(mensaje),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(ctx).pop(true),
+          child: Text(textoBoton),
+        ),
+      ],
+    ),
+  );
+  return respuesta == true;
+}
+
 String? validarContrasenaNueva(String? valor) {
   if ((valor ?? '').length < 6) return 'Mínimo 6 caracteres';
   return null;

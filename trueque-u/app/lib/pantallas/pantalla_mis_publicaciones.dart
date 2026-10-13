@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../componentes/comunes.dart';
 import '../estado/controlador_autenticacion.dart';
@@ -92,15 +93,12 @@ class _PantallaMisPublicacionesState extends State<PantallaMisPublicaciones> {
   }
 
   /// Permite al dueño alternar de modo/estado entre:
-  /// 'disponible', 'reservado', 'oculto', 'no disponible'.
+  /// 'disponible', 'oculto', 'no disponible'.
   Future<void> _cambiarEstado(int id, String nuevoEstado) async {
     try {
-      final usuario = context.read<ControladorAutenticacion>().usuario;
-      await context.read<ControladorAutenticacion>().cambiarEstadoPublicacion(
-            id,
-            nuevoEstado,
-            idUsuario: usuario?.id,
-          );
+      await context
+          .read<ControladorAutenticacion>()
+          .cambiarEstadoPublicacion(id, nuevoEstado);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Publicación cambiada a "$nuevoEstado"')),
@@ -137,6 +135,66 @@ class _PantallaMisPublicacionesState extends State<PantallaMisPublicaciones> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error al descartar la reserva')),
+      );
+    }
+  }
+
+  /// Abre el chat de WhatsApp con el teléfono de quien reservó (Bolivia: +591).
+  Future<void> _abrirWhatsapp(String telefono) async {
+    final enlace = Uri.parse('https://wa.me/591$telefono');
+    bool abierto = false;
+    try {
+      abierto = await launchUrl(enlace, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      abierto = false;
+    }
+    if (!abierto && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo abrir WhatsApp')),
+      );
+    }
+  }
+
+  /// Completa el intercambio de una publicación reservada (pide confirmación).
+  /// Si no está reservada, explica por qué no se puede.
+  Future<void> _completar(int id, String titulo, bool estaReservada) async {
+    if (!estaReservada) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Solo se puede completar un intercambio de una publicación reservada. Primero debe reservarse',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final acepta = await confirmarAccion(
+      context,
+      titulo: 'Completar intercambio',
+      mensaje:
+          '¿Confirmas que el intercambio de "$titulo" ya se realizó? '
+          'Después no se podrá reservar, editar ni eliminar.',
+      textoBoton: 'Completar',
+    );
+    if (!acepta || !mounted) return;
+
+    try {
+      await context.read<ControladorAutenticacion>().completarIntercambio(id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('¡Intercambio completado!')),
+      );
+      _cargarPublicaciones();
+    } on ExcepcionApi catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.mensaje)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error al completar el intercambio')),
       );
     }
   }
@@ -249,16 +307,23 @@ class _PantallaMisPublicacionesState extends State<PantallaMisPublicaciones> {
               final idPub = (pub['id'] as num).toInt();
               final usuarioReserva = pub['usuario_reserva'] as Map<String, dynamic>?;
               final nombreReserva = usuarioReserva?['nombre'] as String?;
+              // El teléfono solo le llega al dueño (esta es su pantalla)
+              final telefonoReserva = usuarioReserva?['telefono'] as String?;
               final estaReservada = pub['estado_publicacion'] == 'reservado';
+              final tituloPub = (pub['titulo'] as String?) ?? 'Sin título';
 
               return _TarjetaPublicacion(
                 id: idPub,
                 titulo: (pub['titulo'] as String?) ?? 'Sin título',
                 descripcion: pub['descripcion'] as String?,
                 estado: (pub['estado'] as String?) ?? 'usado',
+                categoria: (pub['categoria'] as String?) ?? 'otros',
                 estadoPublicacion:
                     (pub['estado_publicacion'] as String?) ?? 'disponible',
                 nombreReserva: nombreReserva,
+                telefonoReserva: telefonoReserva,
+                alCompletar: () => _completar(idPub, tituloPub, estaReservada),
+                alAbrirWhatsapp: () => _abrirWhatsapp(telefonoReserva ?? ''),
                 alEditar: () => _editar(
                   idPub,
                   (pub['titulo'] as String?) ?? '',
@@ -314,8 +379,12 @@ class _TarjetaPublicacion extends StatelessWidget {
     required this.titulo,
     this.descripcion,
     required this.estado,
+    required this.categoria,
     required this.estadoPublicacion,
     this.nombreReserva,
+    this.telefonoReserva,
+    required this.alCompletar,
+    required this.alAbrirWhatsapp,
     required this.alEditar,
     required this.alEliminar,
     required this.alDescartarReserva,
@@ -326,8 +395,12 @@ class _TarjetaPublicacion extends StatelessWidget {
   final String titulo;
   final String? descripcion;
   final String estado;
+  final String categoria;
   final String estadoPublicacion;
   final String? nombreReserva;
+  final String? telefonoReserva;
+  final VoidCallback alCompletar;
+  final VoidCallback alAbrirWhatsapp;
   final VoidCallback alEditar;
   final VoidCallback alEliminar;
   final VoidCallback alDescartarReserva;
@@ -400,16 +473,6 @@ class _TarjetaPublicacion extends StatelessWidget {
                       ),
                     ),
                     const PopupMenuItem(
-                      value: 'reservado',
-                      child: Row(
-                        children: [
-                          Icon(Icons.bookmark_outline, size: 18, color: Colors.amber),
-                          SizedBox(width: 8),
-                          Text('Marcar como Reservado'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
                       value: 'oculto',
                       child: Row(
                         children: [
@@ -465,6 +528,12 @@ class _TarjetaPublicacion extends StatelessWidget {
                   colorTexto: colores.onPrimaryContainer,
                 ),
                 _Etiqueta(
+                  icono: Icons.category_outlined,
+                  texto: etiquetasCategoria[categoria] ?? 'Otros',
+                  fondo: colores.secondaryContainer,
+                  colorTexto: colores.onSecondaryContainer,
+                ),
+                _Etiqueta(
                   icono: Icons.info_outline,
                   texto: _formatearEstadoPublicacion(estadoPublicacion),
                   fondo: estaReservada
@@ -484,26 +553,64 @@ class _TarjetaPublicacion extends StatelessWidget {
                     fondo: colores.tertiaryContainer,
                     colorTexto: colores.onTertiaryContainer,
                   ),
+                // Teléfono de quien reservó: al tocarlo se abre WhatsApp
+                if (estaReservada &&
+                    telefonoReserva != null &&
+                    telefonoReserva!.isNotEmpty)
+                  InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: alAbrirWhatsapp,
+                    child: Tooltip(
+                      message: 'Abrir WhatsApp',
+                      child: _Etiqueta(
+                        icono: Icons.chat_outlined,
+                        texto: 'WhatsApp: $telefonoReserva',
+                        fondo: Colors.green.shade100,
+                        colorTexto: Colors.green.shade900,
+                      ),
+                    ),
+                  ),
+                if (estaReservada &&
+                    (telefonoReserva == null || telefonoReserva!.isEmpty))
+                  _Etiqueta(
+                    icono: Icons.phone_outlined,
+                    texto: 'Sin teléfono registrado',
+                    fondo: colores.tertiaryContainer,
+                    colorTexto: colores.onTertiaryContainer,
+                  ),
               ],
             ),
 
-            // Si está reservada, botón directo para descartar la reserva y volver a disponible
-            if (estaReservada) ...[
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  OutlinedButton.icon(
-                    icon: const Icon(Icons.undo, size: 16),
-                    label: const Text('Descartar reserva (volver a disponible)'),
-                    style: OutlinedButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    onPressed: alDescartarReserva,
+            const SizedBox(height: 12),
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                // Descartar la reserva (volver a disponible): comentado por ahora
+                // if (estaReservada)
+                //   OutlinedButton.icon(
+                //     icon: const Icon(Icons.undo, size: 16),
+                //     label: const Text('Descartar reserva'),
+                //     style: OutlinedButton.styleFrom(
+                //       visualDensity: VisualDensity.compact,
+                //     ),
+                //     onPressed: alDescartarReserva,
+                //   ),
+                // Completar el intercambio: solo funciona si está reservada
+                // (si no, al tocarlo se explica el motivo)
+                FilledButton.icon(
+                  icon: const Icon(Icons.handshake_outlined, size: 16),
+                  label: const Text('Completar intercambio'),
+                  style: FilledButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    backgroundColor: estaReservada ? null : colores.surfaceContainerHighest,
+                    foregroundColor: estaReservada ? null : colores.outline,
                   ),
-                ],
-              ),
-            ],
+                  onPressed: alCompletar,
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -516,6 +623,8 @@ class _TarjetaPublicacion extends StatelessWidget {
         return 'Disponible';
       case 'reservado':
         return 'Reservado';
+      case 'intercambiado':
+        return 'Intercambiado';
       case 'oculto':
         return 'Oculto';
       case 'no disponible':

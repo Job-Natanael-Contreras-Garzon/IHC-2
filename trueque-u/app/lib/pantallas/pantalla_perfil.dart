@@ -46,6 +46,11 @@ class PantallaPerfil extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         OutlinedButton(
+          onPressed: () => context.go('/intercambios'),
+          child: const Text('Intercambios completados'),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton(
           // Al cerrar la sesión, el router redirige solo al inicio de sesión.
           onPressed: () => context.read<ControladorAutenticacion>().cerrarSesion(),
           child: const Text('Cerrar sesión'),

@@ -17,6 +17,7 @@ class _PantallaRegistroState extends State<PantallaRegistro> {
   final _formulario = GlobalKey<FormState>();
   final _nombre = TextEditingController();
   final _correo = TextEditingController();
+  final _telefono = TextEditingController();
   final _contrasena = TextEditingController();
   final _confirmacion = TextEditingController();
   bool _cargando = false;
@@ -26,6 +27,7 @@ class _PantallaRegistroState extends State<PantallaRegistro> {
   void dispose() {
     _nombre.dispose();
     _correo.dispose();
+    _telefono.dispose();
     _contrasena.dispose();
     _confirmacion.dispose();
     super.dispose();
@@ -40,7 +42,8 @@ class _PantallaRegistroState extends State<PantallaRegistro> {
     try {
       await context
           .read<ControladorAutenticacion>()
-          .registrar(_nombre.text, _correo.text, _contrasena.text);
+          .registrar(_nombre.text, _correo.text, _contrasena.text,
+              telefono: _telefono.text);
       if (!mounted) return;
       // La cuenta nueva queda con la sesión iniciada.
       context.go('/perfil');
@@ -77,6 +80,14 @@ class _PantallaRegistroState extends State<PantallaRegistro> {
                 tipoTeclado: TextInputType.emailAddress,
                 accionTeclado: TextInputAction.next,
                 validador: validarCorreo,
+              ),
+              const SizedBox(height: 16),
+              CampoTexto(
+                controlador: _telefono,
+                etiqueta: 'Teléfono (opcional, 8 dígitos)',
+                tipoTeclado: TextInputType.phone,
+                accionTeclado: TextInputAction.next,
+                validador: validarTelefonoOpcional,
               ),
               const SizedBox(height: 16),
               CampoTexto(
