@@ -7,7 +7,14 @@ async function iniciar() {
   try {
     await sequelize.authenticate();
   } catch (error) {
+    // El mensaje a veces llega vacío; por eso se muestran también el tipo y el código
+    const detalle = error.original || error;
     console.error("No se pudo conectar a PostgreSQL:", error.message);
+    console.error("Tipo:", detalle.name, "| Código:", detalle.code);
+    // Si Node probó varias direcciones, cada intento fallido viene en "errors"
+    for (const intento of detalle.errors || []) {
+      console.error(" -", intento.code, `${intento.address}:${intento.port}`);
+    }
     process.exit(1);
   }
 
