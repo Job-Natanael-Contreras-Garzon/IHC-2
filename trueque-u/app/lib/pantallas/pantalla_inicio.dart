@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../componentes/comunes.dart';
+import '../widgets/pagina_acceso.dart';
 
 /// RUTA PÚBLICA ("/"): se abre sin iniciar sesión.
 class PantallaInicio extends StatelessWidget {

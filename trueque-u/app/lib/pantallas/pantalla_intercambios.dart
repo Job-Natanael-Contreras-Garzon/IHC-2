@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../componentes/comunes.dart';
 import '../estado/controlador_autenticacion.dart';
 import '../servicios/cliente_api.dart';
+import '../widgets/error_con_reintento.dart';
+import '../widgets/mensaje_vacio.dart';
+import '../widgets/pagina_acceso.dart';
+import '../widgets/tarjeta_intercambio.dart';
 
 /// RUTA PRIVADA ("/intercambios"): los intercambios completados de la persona,
 /// ya sea como dueña del objeto o como quien lo reservó.
@@ -56,7 +59,6 @@ class _PantallaIntercambiosState extends State<PantallaIntercambios> {
 
   @override
   Widget build(BuildContext context) {
-    final colores = Theme.of(context).colorScheme;
     final yo = context.watch<ControladorAutenticacion>().usuario;
 
     Widget contenido;
@@ -66,33 +68,18 @@ class _PantallaIntercambiosState extends State<PantallaIntercambios> {
         child: Center(child: CircularProgressIndicator()),
       );
     } else if (_error != null) {
-      contenido = Column(
-        children: [
-          BannerError(_error),
-          FilledButton.tonal(onPressed: _cargar, child: const Text('Reintentar')),
-        ],
-      );
+      contenido = ErrorConReintento(mensaje: _error, alReintentar: _cargar);
     } else if (_intercambios.isEmpty) {
-      contenido = Padding(
-        padding: const EdgeInsets.symmetric(vertical: 40),
-        child: Column(
-          children: [
-            Icon(Icons.handshake_outlined, size: 64, color: colores.outline),
-            const SizedBox(height: 16),
-            const Text(
-              'Aún no tienes intercambios completados',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+      contenido = const MensajeVacio(
+        icono: Icons.handshake_outlined,
+        titulo: 'Aún no tienes intercambios completados',
       );
     } else {
       contenido = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (final pub in _intercambios) ...[
-            _construirTarjeta(pub, yo?.id, colores),
+            TarjetaIntercambio(pub: pub, idYo: yo?.id),
             const SizedBox(height: 12),
           ],
         ],
@@ -118,60 +105,6 @@ class _PantallaIntercambiosState extends State<PantallaIntercambios> {
           child: const Text('Volver al perfil'),
         ),
       ],
-    );
-  }
-
-  /// Una tarjeta por intercambio: el objeto y con quién se hizo.
-  Widget _construirTarjeta(
-    Map<String, dynamic> pub,
-    int? idYo,
-    ColorScheme colores,
-  ) {
-    final autor = pub['autor'] as Map<String, dynamic>?;
-    final reserva = pub['usuario_reserva'] as Map<String, dynamic>?;
-    final fueDueno = (pub['id_usuario'] as num?)?.toInt() == idYo;
-
-    // La otra persona del intercambio
-    final otra = fueDueno ? reserva : autor;
-    final nombreOtra = otra?['nombre'] as String? ?? 'otra persona';
-    final categoria = etiquetasCategoria[pub['categoria']] ?? 'Otros';
-
-    return Card(
-      elevation: 1,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              (pub['titulo'] as String?) ?? 'Sin título',
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              fueDueno
-                  ? 'Lo entregaste a: $nombreOtra'
-                  : 'Lo recibiste de: $nombreOtra',
-              style: TextStyle(color: colores.onSurfaceVariant),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                Chip(
-                  visualDensity: VisualDensity.compact,
-                  label: Text('Categoría: $categoria'),
-                ),
-                Chip(
-                  visualDensity: VisualDensity.compact,
-                  avatar: const Icon(Icons.check_circle_outline, size: 16),
-                  label: const Text('Intercambiado'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

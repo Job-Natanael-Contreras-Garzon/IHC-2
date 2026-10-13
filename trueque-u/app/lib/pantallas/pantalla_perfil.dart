@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../componentes/comunes.dart';
 import '../estado/controlador_autenticacion.dart';
+import '../widgets/pagina_acceso.dart';
 
 /// RUTA PRIVADA ("/perfil"): sin sesión, el router redirige a "/iniciar-sesion".
 class PantallaPerfil extends StatelessWidget {

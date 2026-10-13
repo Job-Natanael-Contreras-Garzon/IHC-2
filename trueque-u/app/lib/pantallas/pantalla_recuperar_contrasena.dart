@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../componentes/comunes.dart';
 import '../estado/controlador_autenticacion.dart';
 import '../servicios/cliente_api.dart';
+import '../utilidades/validadores.dart';
+import '../widgets/banner_error.dart';
+import '../widgets/boton_carga.dart';
+import '../widgets/campo_texto.dart';
+import '../widgets/pagina_acceso.dart';
 
 /// Recuperar contraseña: la persona escribe su correo y recibe una contraseña nueva por correo.
 class PantallaRecuperarContrasena extends StatefulWidget {
