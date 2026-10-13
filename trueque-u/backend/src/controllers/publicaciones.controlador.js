@@ -34,10 +34,12 @@ const INCLUIR_USUARIOS_DUENO = [
 
 // GET /api/publicaciones
 // Catálogo general. Por defecto no muestra las ocultas ni las intercambiadas.
+// Quién reservó solo lo ven el dueño y quien reservó.
 // Búsqueda y filtros opcionales (se pueden combinar), por ejemplo:
 // /api/publicaciones?buscar=libro&categoria=libros&condicion=usado&disponibilidad=disponible
 const getPublicaciones = async (req, res) => {
   try {
+    const idUsuario = req.usuario.id;
     const { buscar, categoria, condicion, disponibilidad } = req.query;
 
     // Por defecto: todo menos lo oculto y lo intercambiado
@@ -86,7 +88,20 @@ const getPublicaciones = async (req, res) => {
       include: INCLUIR_USUARIOS,
       order: [["id", "DESC"]], // las más nuevas primero
     });
-    res.json(publicaciones);
+
+    // Quién reservó lo ven solo el dueño y quien reservó.
+    // Para el resto la publicación solo figura como "reservado"
+    const lista = publicaciones.map((publicacion) => {
+      const datos = publicacion.toJSON();
+      const esDueno = datos.id_usuario === idUsuario;
+      const esQuienReservo = datos.id_usuario_reserva === idUsuario;
+      if (!esDueno && !esQuienReservo) {
+        datos.id_usuario_reserva = null;
+        datos.usuario_reserva = null;
+      }
+      return datos;
+    });
+    res.json(lista);
   } catch (error) {
     console.error("Error al obtener el feed de publicaciones:", error);
     res.status(500).json({ error: "Error al obtener las publicaciones" });
@@ -117,7 +132,8 @@ const getMisPublicaciones = async (req, res) => {
 };
 
 // GET /api/publicaciones/:id
-// Una publicación por su id. Si está oculta, solo la ve su creador
+// Una publicación por su id. Si está oculta, solo la ve su creador.
+// Quién reservó solo lo ven el dueño y quien reservó
 const getPublicacion = async (req, res) => {
   try {
     const idUsuario = req.usuario.id;
@@ -136,12 +152,22 @@ const getPublicacion = async (req, res) => {
       return res.status(404).json({ error: "Publicación no encontrada" });
     }
 
+    const esDueno = publicacion.id_usuario === idUsuario;
+    const esQuienReservo = publicacion.id_usuario_reserva === idUsuario;
+
     // Si quien mira es el dueño, se vuelve a leer con el teléfono de quien reservó
-    if (publicacion.id_usuario === idUsuario) {
+    if (esDueno) {
       await publicacion.reload({ include: INCLUIR_USUARIOS_DUENO });
     }
 
-    res.json(publicacion);
+    // Quién reservó lo ven solo el dueño y quien reservó
+    const datos = publicacion.toJSON();
+    if (!esDueno && !esQuienReservo) {
+      datos.id_usuario_reserva = null;
+      datos.usuario_reserva = null;
+    }
+
+    res.json(datos);
   } catch (error) {
     console.error("Error al obtener la publicación:", error);
     res.status(500).json({ error: "Error al obtener la publicación" });

@@ -11,6 +11,11 @@ jest.mock("../database/sequelize", () => ({
 const { models } = require("../database/sequelize");
 const { getPublicaciones } = require("./publicaciones.controlador");
 
+// Una fila falsa como las que devuelve la base de datos (con toJSON)
+function crearFila(datos) {
+  return { ...datos, toJSON: () => ({ ...datos }) };
+}
+
 // Respuesta falsa de Express para poder ver qué devolvió el controlador
 function crearRespuesta() {
   const res = {};
@@ -27,9 +32,10 @@ describe("Buscar y filtrar publicaciones", () => {
   // CASO CON RESULTADOS: libros usados disponibles que tengan "algebra" en el título
   test("combina búsqueda y filtros y devuelve las publicaciones encontradas", async () => {
     const encontrada = { id: 1, titulo: "Libro de algebra", categoria: "libros" };
-    models.publicaciones.findAll.mockResolvedValue([encontrada]);
+    models.publicaciones.findAll.mockResolvedValue([crearFila(encontrada)]);
 
     const req = {
+      usuario: { id: 1 },
       query: {
         buscar: "algebra",
         categoria: "libros",
@@ -48,14 +54,16 @@ describe("Buscar y filtrar publicaciones", () => {
     expect(consulta.where.estado_publicacion).toBe("disponible");
 
     // Lo que se devolvió a la app
-    expect(res.json).toHaveBeenCalledWith([encontrada]);
+    const devueltas = res.json.mock.calls[0][0];
+    expect(devueltas).toHaveLength(1);
+    expect(devueltas[0].titulo).toBe(encontrada.titulo);
   });
 
   // CASO SIN RESULTADOS: ninguna publicación coincide
   test("si nada coincide devuelve una lista vacía", async () => {
     models.publicaciones.findAll.mockResolvedValue([]);
 
-    const req = { query: { buscar: "no existe", categoria: "ropa" } };
+    const req = { usuario: { id: 1 }, query: { buscar: "no existe", categoria: "ropa" } };
     const res = crearRespuesta();
     await getPublicaciones(req, res);
 
@@ -66,7 +74,7 @@ describe("Buscar y filtrar publicaciones", () => {
     models.publicaciones.findAll.mockResolvedValue([]);
 
     const res = crearRespuesta();
-    await getPublicaciones({ query: {} }, res);
+    await getPublicaciones({ usuario: { id: 1 }, query: {} }, res);
 
     const consulta = models.publicaciones.findAll.mock.calls[0][0];
     expect(consulta.where.estado_publicacion).toEqual({
@@ -76,9 +84,45 @@ describe("Buscar y filtrar publicaciones", () => {
 
   test("una disponibilidad que no existe da error 400", async () => {
     const res = crearRespuesta();
-    await getPublicaciones({ query: { disponibilidad: "loquesea" } }, res);
+    await getPublicaciones({ usuario: { id: 1 }, query: { disponibilidad: "loquesea" } }, res);
 
     expect(res.status).toHaveBeenCalledWith(400);
     expect(models.publicaciones.findAll).not.toHaveBeenCalled();
+  });
+
+  // Privacidad: quién reservó solo lo ven el dueño y quien reservó
+  describe("quién reservó", () => {
+    // Publicación del usuario 1, reservada por el usuario 2
+    const reservada = {
+      id: 5,
+      id_usuario: 1,
+      id_usuario_reserva: 2,
+      estado_publicacion: "reservado",
+      usuario_reserva: { id: 2, nombre: "Reservador" },
+    };
+
+    async function verComo(idUsuario) {
+      models.publicaciones.findAll.mockResolvedValue([crearFila(reservada)]);
+      const res = crearRespuesta();
+      await getPublicaciones({ usuario: { id: idUsuario }, query: {} }, res);
+      return res.json.mock.calls[0][0][0];
+    }
+
+    test("el dueño ve quién reservó", async () => {
+      const publicacion = await verComo(1);
+      expect(publicacion.usuario_reserva.nombre).toBe("Reservador");
+    });
+
+    test("quien reservó se ve a sí mismo", async () => {
+      const publicacion = await verComo(2);
+      expect(publicacion.id_usuario_reserva).toBe(2);
+    });
+
+    test("un tercero solo ve que está reservada, sin saber quién", async () => {
+      const publicacion = await verComo(3);
+      expect(publicacion.estado_publicacion).toBe("reservado");
+      expect(publicacion.usuario_reserva).toBeNull();
+      expect(publicacion.id_usuario_reserva).toBeNull();
+    });
   });
 });
