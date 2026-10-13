@@ -2,14 +2,18 @@ const { sequelize, models } = require("../database/sequelize");
 const { crearSesion } = require("../services/sesion.servicio");
 const { cifrar, coincide } = require("../services/contrasena.servicio");
 const { firmarToken } = require("../services/token.servicio");
-const { esCorreoValido, validarContrasena } = require("../utils/validaciones");
+const {
+  esCorreoValido,
+  esTelefonoValido,
+  validarContrasena,
+} = require("../utils/validaciones");
 const { usuarioPublico } = require("../utils/serializadores");
 
 // POST /api/usuarios
 // Registra una cuenta nueva y deja la sesión iniciada
 const postUsuario = async (req, res) => {
   try {
-    const { nombre, correo, contrasena } = req.body || {};
+    const { nombre, correo, contrasena, telefono } = req.body || {};
 
     // Se validan los datos que llegan
     if (typeof nombre !== "string" || nombre.trim().length < 2) {
@@ -23,6 +27,12 @@ const postUsuario = async (req, res) => {
     const errorContrasena = validarContrasena(contrasena);
     if (errorContrasena) {
       return res.status(400).json({ error: errorContrasena });
+    }
+    // El teléfono es opcional; si llega, deben ser 8 dígitos
+    const tieneTelefono =
+      telefono !== undefined && telefono !== null && telefono !== "";
+    if (tieneTelefono && !esTelefonoValido(telefono)) {
+      return res.status(400).json({ error: "El teléfono debe tener 8 dígitos" });
     }
 
     // El correo se guarda en minúsculas y no puede repetirse
@@ -46,6 +56,7 @@ const postUsuario = async (req, res) => {
           nombre: nombre.trim(),
           correo: correoNormalizado,
           contrasena_hash: contrasenaHash,
+          telefono: tieneTelefono ? telefono.trim() : null,
         },
         { transaction: t },
       );
