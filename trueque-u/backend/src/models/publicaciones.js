@@ -33,6 +33,11 @@ module.exports = function(sequelize, DataTypes) {
       allowNull: false,
       defaultValue: "disponible"
     },
+    categoria: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      defaultValue: "otros"
+    },
     id_usuario_reserva: {
       type: DataTypes.INTEGER,
       allowNull: true,
