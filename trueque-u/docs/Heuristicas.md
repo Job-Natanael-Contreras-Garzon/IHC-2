@@ -1,0 +1,7 @@
+# Registro de Hallazgos de Usabilidad
+
+| Pantalla / Evidencia | Problema Observado | Consecuencia | Heurística | Severidad |
+| :--- | :--- | :--- | :--- | :---: |
+| [`/captura1.png`](file:///c:/Users/contr/Documents/Repositorios%20de%20Git/IHC-2/trueque-u/docs/evidencias/captura1.png) | No se pide confirmación previa al presionar el botón de reserva. | El usuario puede reservar accidentalmente o no tener certeza si la acción se ejecutó con éxito. | **H1: Visibilidad del estado del sistema** *(o H5: Prevención de errores)* | **3** <br>*(Mayor)* |
+| [`/captura2.png`](file:///c:/Users/contr/Documents/Repositorios%20de%20Git/IHC-2/trueque-u/docs/evidencias/captura2.png) | El usuario no cuenta con la opción o mecanismo para deshacer/cancelar la reserva realizada. | Queda atrapado en el flujo de reserva sin una "salida de emergencia" para corregir errores. | **H3: Control y libertad del usuario** | **4** <br>*(Crítico)* |
+| [`/captura3.png`](file:///c:/Users/contr/Documents/Repositorios%20de%20Git/IHC-2/trueque-u/docs/evidencias/captura3.png) | El usuario que reserva no dispone de información ni medios visibles para contactar al dueño del producto. | No se puede coordinar la entrega ni concretar el intercambio, bloqueando el objetivo central del sistema. | **H7: Flexibilidad y eficiencia de uso** | **4** <br>*(Crítico)* |
