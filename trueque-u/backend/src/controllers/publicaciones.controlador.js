@@ -32,6 +32,17 @@ const INCLUIR_USUARIOS_DUENO = [
   },
 ];
 
+// Catálogo general: el autor trae su teléfono para que quien reserve pueda
+// contactarlo (H7). El teléfono se quita abajo para todos los demás.
+const INCLUIR_USUARIOS_CATALOGO = [
+  {
+    model: models.usuarios,
+    as: "autor",
+    attributes: ["id", "nombre", "telefono"],
+  },
+  { model: models.usuarios, as: "usuario_reserva", attributes: ["id", "nombre"] },
+];
+
 // GET /api/publicaciones
 // Catálogo general. Por defecto no muestra las ocultas ni las intercambiadas.
 // Quién reservó solo lo ven el dueño y quien reservó.
@@ -85,7 +96,7 @@ const getPublicaciones = async (req, res) => {
 
     const publicaciones = await models.publicaciones.findAll({
       where: donde,
-      include: INCLUIR_USUARIOS,
+      include: INCLUIR_USUARIOS_CATALOGO,
       order: [["id", "DESC"]], // las más nuevas primero
     });
 
@@ -98,6 +109,13 @@ const getPublicaciones = async (req, res) => {
       if (!esDueno && !esQuienReservo) {
         datos.id_usuario_reserva = null;
         datos.usuario_reserva = null;
+      }
+      // El teléfono del dueño solo lo recibe quien reservó (mientras esté reservada)
+      const puedeVerTelefono =
+        esQuienReservo && datos.estado_publicacion === "reservado";
+      if (datos.autor && !puedeVerTelefono) {
+        datos.autor = { ...datos.autor };
+        delete datos.autor.telefono;
       }
       return datos;
     });

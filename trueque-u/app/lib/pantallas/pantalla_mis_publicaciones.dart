@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../estado/controlador_autenticacion.dart';
 import '../servicios/cliente_api.dart';
+import '../utilidades/whatsapp.dart';
 import '../widgets/dialogo_confirmacion.dart';
 import '../widgets/dialogo_editar_publicacion.dart';
 import '../widgets/error_con_reintento.dart';
@@ -140,22 +140,6 @@ class _PantallaMisPublicacionesState extends State<PantallaMisPublicaciones> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error al descartar la reserva')),
-      );
-    }
-  }
-
-  /// Abre el chat de WhatsApp con el teléfono de quien reservó (Bolivia: +591).
-  Future<void> _abrirWhatsapp(String telefono) async {
-    final enlace = Uri.parse('https://wa.me/591$telefono');
-    bool abierto = false;
-    try {
-      abierto = await launchUrl(enlace, mode: LaunchMode.externalApplication);
-    } catch (_) {
-      abierto = false;
-    }
-    if (!abierto && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No se pudo abrir WhatsApp')),
       );
     }
   }
@@ -303,7 +287,7 @@ class _PantallaMisPublicacionesState extends State<PantallaMisPublicaciones> {
                 nombreReserva: nombreReserva,
                 telefonoReserva: telefonoReserva,
                 alCompletar: () => _completar(idPub, tituloPub, estaReservada),
-                alAbrirWhatsapp: () => _abrirWhatsapp(telefonoReserva ?? ''),
+                alAbrirWhatsapp: () => abrirWhatsapp(context, telefonoReserva ?? ''),
                 alEditar: () => _editar(
                   idPub,
                   (pub['titulo'] as String?) ?? '',

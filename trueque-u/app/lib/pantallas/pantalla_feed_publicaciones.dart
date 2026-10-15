@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../estado/controlador_autenticacion.dart';
 import '../servicios/cliente_api.dart';
+import '../utilidades/whatsapp.dart';
 import '../widgets/dialogo_confirmacion.dart';
 import '../widgets/error_con_reintento.dart';
 import '../widgets/filtros_feed.dart';
@@ -158,8 +159,14 @@ class _PantallaFeedPublicacionesState extends State<PantallaFeedPublicaciones> {
     try {
       await auth.reservarPublicacion(idPublicacion);
       if (!mounted) return;
+      // H1/H7: se dice qué pasó y cuál es el siguiente paso
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('¡Publicación reservada exitosamente!')),
+        SnackBar(
+          duration: const Duration(seconds: 6),
+          content: Text(
+            'Reservaste "$titulo". Escríbele al dueño por WhatsApp para coordinar la entrega.',
+          ),
+        ),
       );
       // Recarga el feed para actualizar la información de la card
       await _cargarPublicaciones();
@@ -334,6 +341,8 @@ class _PantallaFeedPublicacionesState extends State<PantallaFeedPublicaciones> {
 
                   final nombreAutor = autor?['nombre'] as String? ?? 'Usuario';
                   final nombreReserva = usuarioReserva?['nombre'] as String?;
+                  // El servidor manda el teléfono del dueño solo a quien reservó
+                  final telefonoAutor = autor?['telefono'] as String?;
 
                   final estaReservado = pub['estado_publicacion'] == 'reservado';
                   final tituloPub = (pub['titulo'] as String?) ?? 'Sin título';
@@ -357,6 +366,13 @@ class _PantallaFeedPublicacionesState extends State<PantallaFeedPublicaciones> {
                     loReserveYo: loReserveYo,
                     esMiPublicacion: esMiPublicacion,
                     enProgreso: enProgreso,
+                    telefonoDueno: telefonoAutor,
+                    alContactar: () => abrirWhatsapp(
+                      context,
+                      telefonoAutor ?? '',
+                      mensaje:
+                          'Hola $nombreAutor, reservé "$tituloPub" en Trueque U. ¿Coordinamos la entrega?',
+                    ),
                     alReservar: () => _reservar(id, tituloPub),
                     alDescartar: () => _descartarReserva(id, tituloPub),
                     alCompletar: () => _completar(id, tituloPub),

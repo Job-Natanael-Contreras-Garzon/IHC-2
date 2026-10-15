@@ -126,3 +126,38 @@ describe("Buscar y filtrar publicaciones", () => {
     });
   });
 });
+
+describe("Teléfono del dueño en el catálogo (H7)", () => {
+  beforeEach(() => {
+    models.publicaciones.findAll.mockReset();
+  });
+
+  // Publicación del usuario 1, reservada por el usuario 2
+  const filaReservada = () =>
+    crearFila({
+      id: 7,
+      id_usuario: 1,
+      id_usuario_reserva: 2,
+      estado_publicacion: "reservado",
+      autor: { id: 1, nombre: "Ana", telefono: "70000000" },
+      usuario_reserva: { id: 2, nombre: "Beto" },
+    });
+
+  async function pedirComo(idUsuario) {
+    models.publicaciones.findAll.mockResolvedValue([filaReservada()]);
+    const res = crearRespuesta();
+    await getPublicaciones({ usuario: { id: idUsuario }, query: {} }, res);
+    return res.json.mock.calls[0][0][0];
+  }
+
+  test("quien reservó recibe el teléfono del dueño", async () => {
+    const pub = await pedirComo(2);
+    expect(pub.autor.telefono).toBe("70000000");
+  });
+
+  test("otra persona no recibe el teléfono del dueño", async () => {
+    const pub = await pedirComo(3);
+    expect(pub.autor.telefono).toBeUndefined();
+    expect(pub.autor.nombre).toBe("Ana");
+  });
+});

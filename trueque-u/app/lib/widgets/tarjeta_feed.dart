@@ -20,10 +20,12 @@ class TarjetaFeed extends StatelessWidget {
     required this.estadoPublicacion,
     required this.nombreAutor,
     this.nombreReserva,
+    this.telefonoDueno,
     required this.estaReservado,
     required this.loReserveYo,
     required this.esMiPublicacion,
     required this.enProgreso,
+    required this.alContactar,
     required this.alReservar,
     required this.alDescartar,
     required this.alCompletar,
@@ -37,10 +39,12 @@ class TarjetaFeed extends StatelessWidget {
   final String estadoPublicacion; // 'disponible', 'reservado', etc.
   final String nombreAutor;
   final String? nombreReserva;
+  final String? telefonoDueno; // solo llega si yo reservé
   final bool estaReservado;
   final bool loReserveYo;
   final bool esMiPublicacion;
   final bool enProgreso;
+  final VoidCallback alContactar;
   final VoidCallback alReservar;
   final VoidCallback alDescartar;
   final VoidCallback alCompletar;
@@ -231,6 +235,7 @@ class TarjetaFeed extends StatelessWidget {
 
     // Caso 1: Reservada por el usuario actual -> puede completar o cancelar la reserva
     if (estaReservado && loReserveYo) {
+      final tieneTelefono = telefonoDueno != null && telefonoDueno!.isNotEmpty;
       return Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -241,16 +246,41 @@ class TarjetaFeed extends StatelessWidget {
             onPressed: alCompletar,
           ),
           const SizedBox(height: 6),
-          // H3: salida de emergencia para quien reservó por error
-          OutlinedButton.icon(
-            icon: const Icon(Icons.close, size: 18),
-            label: const Text('Cancelar reserva'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: colores.error,
-              side: BorderSide(color: colores.error),
-            ),
-            onPressed: alDescartar,
+          Row(
+            children: [
+              // H7: quien reservó escribe al dueño con un toque para coordinar la entrega
+              if (tieneTelefono) ...[
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.chat_outlined, size: 18),
+                    label: const Text('WhatsApp'),
+                    onPressed: alContactar,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              // H3: salida de emergencia para quien reservó por error
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.close, size: 18),
+                  label: const Text('Cancelar reserva'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: colores.error,
+                    side: BorderSide(color: colores.error),
+                  ),
+                  onPressed: alDescartar,
+                ),
+              ),
+            ],
           ),
+          if (!tieneTelefono) ...[
+            const SizedBox(height: 4),
+            Text(
+              'El dueño no registró teléfono',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 11, color: colores.outline),
+            ),
+          ],
         ],
       );
     }
