@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../estado/controlador_autenticacion.dart';
 import '../servicios/cliente_api.dart';
 import '../utilidades/whatsapp.dart';
+import '../widgets/dialogo_ayuda.dart';
 import '../widgets/dialogo_confirmacion.dart';
 import '../widgets/error_con_reintento.dart';
 import '../widgets/filtros_feed.dart';
@@ -394,6 +395,12 @@ class _PantallaFeedPublicacionesState extends State<PantallaFeedPublicaciones> {
           onPressed: () => context.go('/perfil'),
         ),
         actions: [
+          // H10: ayuda contextual, siempre a un toque
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            tooltip: 'Ayuda: ¿cómo funciona?',
+            onPressed: () => mostrarAyudaTrueque(context),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Actualizar feed',
