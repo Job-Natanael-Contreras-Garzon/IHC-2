@@ -20,6 +20,7 @@ class TarjetaMiPublicacion extends StatelessWidget {
     required this.estadoPublicacion,
     this.nombreReserva,
     this.telefonoReserva,
+    required this.enProgreso,
     required this.alCompletar,
     required this.alAbrirWhatsapp,
     required this.alEditar,
@@ -36,6 +37,7 @@ class TarjetaMiPublicacion extends StatelessWidget {
   final String estadoPublicacion;
   final String? nombreReserva;
   final String? telefonoReserva;
+  final bool enProgreso; // hay una acción en curso con esta publicación
   final VoidCallback alCompletar;
   final VoidCallback alAbrirWhatsapp;
   final VoidCallback alEditar;
@@ -63,6 +65,11 @@ class TarjetaMiPublicacion extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Indicador de progreso mientras el servidor responde
+            if (enProgreso) ...[
+              const LinearProgressIndicator(minHeight: 3),
+              const SizedBox(height: 8),
+            ],
             // Encabezado: Título y menú de opciones (editar / cambiar estado / eliminar)
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,13 +97,14 @@ class TarjetaMiPublicacion extends StatelessWidget {
                       : 'Editar información',
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
-                  onPressed: alEditar,
+                  onPressed: enProgreso ? null : alEditar,
                 ),
                 const SizedBox(width: 8),
                 // Selector de modo / estado_publicacion
                 PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert, size: 20),
                   tooltip: 'Cambiar modo / estado',
+                  enabled: !enProgreso,
                   onSelected: alCambiarEstado,
                   itemBuilder: (ctx) => [
                     const PopupMenuItem(
@@ -135,7 +143,7 @@ class TarjetaMiPublicacion extends StatelessWidget {
                   icon: const Icon(Icons.delete_outline, size: 20),
                   color: colores.error,
                   tooltip: 'Eliminar definitivamente',
-                  onPressed: alEliminar,
+                  onPressed: enProgreso ? null : alEliminar,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),
@@ -244,7 +252,7 @@ class TarjetaMiPublicacion extends StatelessWidget {
                     backgroundColor: estaReservada ? null : colores.surfaceContainerHighest,
                     foregroundColor: estaReservada ? null : colores.outline,
                   ),
-                  onPressed: alCompletar,
+                  onPressed: enProgreso ? null : alCompletar,
                 ),
               ],
             ),

@@ -26,6 +26,9 @@ class _PantallaMisPublicacionesState extends State<PantallaMisPublicaciones> {
   String? _error;
   List<Map<String, dynamic>> _publicaciones = [];
 
+  // Ids con una acción en curso: se muestra progreso y se bloquean sus botones
+  final Set<int> _accionesEnProgreso = {};
+
   @override
   void initState() {
     super.initState();
@@ -82,6 +85,7 @@ class _PantallaMisPublicacionesState extends State<PantallaMisPublicaciones> {
 
     if (confirmar != true || !mounted) return;
 
+    setState(() => _accionesEnProgreso.add(id));
     try {
       await context.read<ControladorAutenticacion>().eliminarPublicacion(id);
       if (!mounted) return;
@@ -94,12 +98,15 @@ class _PantallaMisPublicacionesState extends State<PantallaMisPublicaciones> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.mensaje)),
       );
+    } finally {
+      if (mounted) setState(() => _accionesEnProgreso.remove(id));
     }
   }
 
   /// Permite al dueño alternar de modo/estado entre:
   /// 'disponible', 'oculto', 'no disponible'.
   Future<void> _cambiarEstado(int id, String nuevoEstado) async {
+    setState(() => _accionesEnProgreso.add(id));
     try {
       await context
           .read<ControladorAutenticacion>()
@@ -119,6 +126,8 @@ class _PantallaMisPublicacionesState extends State<PantallaMisPublicaciones> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error al cambiar el estado')),
       );
+    } finally {
+      if (mounted) setState(() => _accionesEnProgreso.remove(id));
     }
   }
 
@@ -168,6 +177,7 @@ class _PantallaMisPublicacionesState extends State<PantallaMisPublicaciones> {
     );
     if (!acepta || !mounted) return;
 
+    setState(() => _accionesEnProgreso.add(id));
     try {
       await context.read<ControladorAutenticacion>().completarIntercambio(id);
       if (!mounted) return;
@@ -185,6 +195,8 @@ class _PantallaMisPublicacionesState extends State<PantallaMisPublicaciones> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error al completar el intercambio')),
       );
+    } finally {
+      if (mounted) setState(() => _accionesEnProgreso.remove(id));
     }
   }
 
@@ -286,6 +298,7 @@ class _PantallaMisPublicacionesState extends State<PantallaMisPublicaciones> {
                     (pub['estado_publicacion'] as String?) ?? 'disponible',
                 nombreReserva: nombreReserva,
                 telefonoReserva: telefonoReserva,
+                enProgreso: _accionesEnProgreso.contains(idPub),
                 alCompletar: () => _completar(idPub, tituloPub, estaReservada),
                 alAbrirWhatsapp: () => abrirWhatsapp(context, telefonoReserva ?? ''),
                 alEditar: () => _editar(
