@@ -103,7 +103,7 @@ class TarjetaMiPublicacion extends StatelessWidget {
                 // Selector de modo / estado_publicacion
                 PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert, size: 20),
-                  tooltip: 'Cambiar modo / estado',
+                  tooltip: 'Cambiar estado de la publicación',
                   enabled: !enProgreso,
                   onSelected: alCambiarEstado,
                   itemBuilder: (ctx) => [

@@ -308,7 +308,7 @@ class TarjetaFeed extends StatelessWidget {
     if (esMiPublicacion) {
       return OutlinedButton.icon(
         icon: const Icon(Icons.edit_outlined, size: 16),
-        label: const Text('Tu publicación (Ver en mis pubs)'),
+        label: const Text('Ver en mis publicaciones'),
         onPressed: () => context.go('/mis-publicaciones'),
       );
     }

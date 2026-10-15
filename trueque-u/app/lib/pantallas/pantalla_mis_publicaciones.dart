@@ -112,8 +112,17 @@ class _PantallaMisPublicacionesState extends State<PantallaMisPublicaciones> {
           .read<ControladorAutenticacion>()
           .cambiarEstadoPublicacion(id, nuevoEstado);
       if (!mounted) return;
+      const nombres = {
+        'disponible': 'disponible',
+        'oculto': 'oculta (solo tú la ves)',
+        'no disponible': 'no disponible (nadie puede reservarla)',
+      };
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Publicación cambiada a "$nuevoEstado"')),
+        SnackBar(
+          content: Text(
+            'Tu publicación ahora está ${nombres[nuevoEstado] ?? nuevoEstado}',
+          ),
+        ),
       );
       _cargarPublicaciones();
     } on ExcepcionApi catch (e) {
