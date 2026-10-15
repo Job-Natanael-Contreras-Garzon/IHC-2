@@ -6,6 +6,7 @@ Future<bool> confirmarAccion(
   required String titulo,
   required String mensaje,
   required String textoBoton,
+  String textoCancelar = 'Cancelar',
 }) async {
   final respuesta = await showDialog<bool>(
     context: context,
@@ -15,7 +16,7 @@ Future<bool> confirmarAccion(
       actions: [
         TextButton(
           onPressed: () => Navigator.of(ctx).pop(false),
-          child: const Text('Cancelar'),
+          child: Text(textoCancelar),
         ),
         FilledButton(
           onPressed: () => Navigator.of(ctx).pop(true),

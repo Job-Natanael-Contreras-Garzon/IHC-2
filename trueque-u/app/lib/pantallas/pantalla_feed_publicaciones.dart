@@ -182,8 +182,20 @@ class _PantallaFeedPublicacionesState extends State<PantallaFeedPublicaciones> {
 
   /// LÓGICA DE DESCARTAR RESERVA:
   /// Envía la petición PUT /api/publicaciones/:id/disponible para liberar la publicación
-  Future<void> _descartarReserva(int idPublicacion) async {
+  Future<void> _descartarReserva(int idPublicacion, String titulo) async {
     final auth = context.read<ControladorAutenticacion>();
+
+    // H3 (control y libertad): quien reservó puede cancelar, pero se le pide confirmar
+    final acepta = await confirmarAccion(
+      context,
+      titulo: 'Cancelar reserva',
+      mensaje:
+          '¿Quieres cancelar tu reserva de "$titulo"? La publicación '
+          'volverá a estar disponible para otras personas.',
+      textoBoton: 'Sí, cancelar reserva',
+      textoCancelar: 'Mantener reserva',
+    );
+    if (!acepta || !mounted) return;
 
     setState(() => _accionesEnProgreso.add(idPublicacion));
 
@@ -307,7 +319,7 @@ class _PantallaFeedPublicacionesState extends State<PantallaFeedPublicaciones> {
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
                   // Relación de aspecto adaptada para acomodar título, descripción y botones
-                  mainAxisExtent: 330,
+                  mainAxisExtent: 360,
                 ),
                 itemCount: _publicaciones.length,
                 itemBuilder: (context, index) {
@@ -346,7 +358,7 @@ class _PantallaFeedPublicacionesState extends State<PantallaFeedPublicaciones> {
                     esMiPublicacion: esMiPublicacion,
                     enProgreso: enProgreso,
                     alReservar: () => _reservar(id, tituloPub),
-                    alDescartar: () => _descartarReserva(id),
+                    alDescartar: () => _descartarReserva(id, tituloPub),
                     alCompletar: () => _completar(id, tituloPub),
                   );
                 },

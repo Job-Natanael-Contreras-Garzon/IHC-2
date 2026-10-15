@@ -205,7 +205,7 @@ class TarjetaFeed extends StatelessWidget {
 
   /// Construye el botón interactivo según el estado de la reserva y el usuario
   Widget _construirBotonAccion(BuildContext context) {
-    // final colores = Theme.of(context).colorScheme; // se usaba en "Descartar reserva"
+    final colores = Theme.of(context).colorScheme;
 
     // Si hay una operación asíncrona en curso en esta card
     if (enProgreso) {
@@ -229,27 +229,28 @@ class TarjetaFeed extends StatelessWidget {
       );
     }
 
-    // Caso 1: Reservada por el usuario actual -> "Completar intercambio"
-    // (la opción de descartar la reserva está comentada por ahora)
+    // Caso 1: Reservada por el usuario actual -> puede completar o cancelar la reserva
     if (estaReservado && loReserveYo) {
       return Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           FilledButton.icon(
             icon: const Icon(Icons.handshake_outlined, size: 18),
             label: const Text('Completar intercambio'),
             onPressed: alCompletar,
           ),
-          // const SizedBox(height: 6),
-          // OutlinedButton.icon(
-          //   icon: const Icon(Icons.close, size: 18),
-          //   label: const Text('Descartar reserva'),
-          //   style: OutlinedButton.styleFrom(
-          //     foregroundColor: colores.error,
-          //     side: BorderSide(color: colores.error),
-          //   ),
-          //   onPressed: alDescartar,
-          // ),
+          const SizedBox(height: 6),
+          // H3: salida de emergencia para quien reservó por error
+          OutlinedButton.icon(
+            icon: const Icon(Icons.close, size: 18),
+            label: const Text('Cancelar reserva'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: colores.error,
+              side: BorderSide(color: colores.error),
+            ),
+            onPressed: alDescartar,
+          ),
         ],
       );
     }
