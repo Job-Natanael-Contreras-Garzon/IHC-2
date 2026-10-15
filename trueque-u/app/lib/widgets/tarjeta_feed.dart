@@ -168,27 +168,21 @@ class TarjetaFeed extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Muestra qué usuario reservó el objeto si está en estado reservado
-                if (estaReservado && nombreReserva != null)
+                // Quién reservó: solo si fue otra persona (si fui yo, ya lo dice el chip superior)
+                if (estaReservado && !loReserveYo && nombreReserva != null)
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: loReserveYo
-                          ? colores.primaryContainer
-                          : colores.tertiaryContainer,
+                      color: colores.tertiaryContainer,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      loReserveYo
-                          ? 'Reservado por ti'
-                          : 'Reservado por: $nombreReserva',
+                      'Reservado por: $nombreReserva',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: loReserveYo
-                            ? colores.onPrimaryContainer
-                            : colores.onTertiaryContainer,
+                        color: colores.onTertiaryContainer,
                       ),
                     ),
                   ),
@@ -296,11 +290,9 @@ class TarjetaFeed extends StatelessWidget {
 
     // Caso 2b: Reservada por otra persona -> Botón deshabilitado
     if (estaReservado) {
-      return FilledButton.tonal(
+      return const FilledButton.tonal(
         onPressed: null,
-        child: Text(
-          nombreReserva != null ? 'Reservado ($nombreReserva)' : 'Reservado',
-        ),
+        child: Text('Reservado'),
       );
     }
 
