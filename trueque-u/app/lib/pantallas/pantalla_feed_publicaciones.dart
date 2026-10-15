@@ -137,10 +137,21 @@ class _PantallaFeedPublicacionesState extends State<PantallaFeedPublicaciones> {
 
   /// LÓGICA DE RESERVAR:
   /// Envía la petición PUT /api/publicaciones/:id/reservado (el servidor usa la sesión)
-  Future<void> _reservar(int idPublicacion) async {
+  Future<void> _reservar(int idPublicacion, String titulo) async {
     final auth = context.read<ControladorAutenticacion>();
     // Solo se reserva con la sesión iniciada
     if (auth.usuario == null) return;
+
+    // H5 (prevención de errores): se pide confirmación antes de apartar el objeto
+    final acepta = await confirmarAccion(
+      context,
+      titulo: 'Reservar publicación',
+      mensaje:
+          '¿Quieres reservar "$titulo"? Quedará apartada para ti y '
+          'podrás cancelar la reserva si cambias de idea.',
+      textoBoton: 'Reservar',
+    );
+    if (!acepta || !mounted) return;
 
     setState(() => _accionesEnProgreso.add(idPublicacion));
 
@@ -334,7 +345,7 @@ class _PantallaFeedPublicacionesState extends State<PantallaFeedPublicaciones> {
                     loReserveYo: loReserveYo,
                     esMiPublicacion: esMiPublicacion,
                     enProgreso: enProgreso,
-                    alReservar: () => _reservar(id),
+                    alReservar: () => _reservar(id, tituloPub),
                     alDescartar: () => _descartarReserva(id),
                     alCompletar: () => _completar(id, tituloPub),
                   );
