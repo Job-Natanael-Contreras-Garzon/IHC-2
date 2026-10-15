@@ -244,15 +244,19 @@ class TarjetaMiPublicacion extends StatelessWidget {
                 //   ),
                 // Completar el intercambio: solo funciona si está reservada
                 // (si no, al tocarlo se explica el motivo)
-                FilledButton.icon(
-                  icon: const Icon(Icons.handshake_outlined, size: 16),
-                  label: const Text('Completar intercambio'),
-                  style: FilledButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                    backgroundColor: estaReservada ? null : colores.surfaceContainerHighest,
-                    foregroundColor: estaReservada ? null : colores.outline,
+                Tooltip(
+                  message: estaReservada
+                      ? 'Completar el intercambio'
+                      : 'Disponible cuando alguien reserve la publicación',
+                  child: FilledButton.icon(
+                    icon: const Icon(Icons.handshake_outlined, size: 16),
+                    label: const Text('Completar intercambio'),
+                    style: FilledButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    // Sin reserva se deshabilita de verdad (igual que en el feed)
+                    onPressed: (estaReservada && !enProgreso) ? alCompletar : null,
                   ),
-                  onPressed: enProgreso ? null : alCompletar,
                 ),
               ],
             ),
