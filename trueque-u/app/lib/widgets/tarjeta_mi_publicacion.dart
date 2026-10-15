@@ -95,8 +95,6 @@ class TarjetaMiPublicacion extends StatelessWidget {
                   tooltip: estaReservada
                       ? 'No se puede editar: la publicación está reservada'
                       : 'Editar información',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
                   onPressed: enProgreso ? null : alEditar,
                 ),
                 const SizedBox(width: 8),
@@ -139,13 +137,13 @@ class TarjetaMiPublicacion extends StatelessWidget {
                     ),
                   ],
                 ),
+                // Acción destructiva separada de las demás, con área táctil estándar (Ley de Fitts)
+                const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.delete_outline, size: 20),
                   color: colores.error,
                   tooltip: 'Eliminar definitivamente',
                   onPressed: enProgreso ? null : alEliminar,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
                 ),
               ],
             ),
