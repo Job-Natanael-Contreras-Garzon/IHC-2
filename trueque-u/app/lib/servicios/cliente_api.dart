@@ -65,7 +65,7 @@ class ClienteApi {
         debugPrint('[api] No se pudo conectar ($seg s). Error real: ${e.runtimeType} -> $e');
       }
       throw ExcepcionApi(
-        'No se pudo conectar con el servidor. ¿Está encendido el backend?',
+        'No se pudo conectar con el servidor. Revisa tu conexión a internet e inténtalo de nuevo en unos segundos.',
       );
     }
     debugPrint('[api] Respondió ${respuesta.statusCode} en ${reloj.elapsedMilliseconds} ms');
@@ -98,13 +98,14 @@ class ClienteApi {
       404 => 'No se encontró lo que buscas.',
       405 => 'Esta acción no está permitida en el servidor.',
       408 => 'La solicitud tardó demasiado en enviarse. Intenta de nuevo.',
-      409 => 'La acción choca con el estado actual. Actualiza e intenta de nuevo.',
+      409 => 'Esta publicación cambió mientras la mirabas. Actualiza la lista e inténtalo de nuevo.',
       500 => 'El servidor tuvo un problema interno. Intenta más tarde.',
       502 => 'El servidor no respondió bien. Intenta de nuevo en unos segundos.',
       503 => 'El servidor no está disponible ahora. Intenta más tarde.',
       504 => 'El servidor tardó demasiado en responder. Intenta de nuevo en unos segundos.',
-      _ => 'Ocurrió un error inesperado.',
+      _ => 'Ocurrió un error inesperado. Inténtalo de nuevo.',
     };
-    return 'Error $codigo: $explicacion';
+    // El código HTTP queda solo en el registro de depuración, no en pantalla
+    return explicacion;
   }
 }
